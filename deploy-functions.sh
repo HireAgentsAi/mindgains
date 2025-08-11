@@ -6,7 +6,7 @@ echo "=========================================="
 
 # Load environment variables
 if [ -f .env ]; then
-    source .env
+    . .env
     echo "✅ Environment variables loaded from .env"
 else
     echo "❌ .env file not found!"
