@@ -411,7 +411,7 @@ export default function Home() {
                 </View>
                 <Text style={styles.progressLabel}>
                   <FontAwesome5 name="arrow-up" size={10} color={theme.colors.text.primary} solid />
-                  {' '}{Math.max(0, (userStats.currentLevel * 1000) - userStats.totalXP)} XP to Level {userStats.currentLevel + 1}
+                  <Text> {Math.max(0, (userStats.currentLevel * 1000) - userStats.totalXP)} XP to Level {userStats.currentLevel + 1}</Text>
                 </Text>
               </View>
             </View>
