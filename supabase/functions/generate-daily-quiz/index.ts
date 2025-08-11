@@ -18,6 +18,122 @@ interface DailyQuizQuestion {
   points: number;
 }
 
+// Fallback questions when AI generation fails
+const getFallbackQuestions = (): DailyQuizQuestion[] => {
+  return [
+    {
+      id: "dq1",
+      question: "Who was the first President of India?",
+      options: ["Dr. Rajendra Prasad", "Dr. A.P.J. Abdul Kalam", "Dr. S. Radhakrishnan", "Zakir Husain"],
+      correct_answer: 0,
+      explanation: "Dr. Rajendra Prasad was the first President of India, serving from 1950 to 1962.",
+      subject: "History",
+      subtopic: "Indian Independence",
+      difficulty: "easy",
+      points: 5
+    },
+    {
+      id: "dq2",
+      question: "Which article of the Indian Constitution deals with the Right to Equality?",
+      options: ["Article 14", "Article 19", "Article 21", "Article 32"],
+      correct_answer: 0,
+      explanation: "Article 14 of the Indian Constitution guarantees equality before law and equal protection of laws.",
+      subject: "Polity",
+      subtopic: "Fundamental Rights",
+      difficulty: "medium",
+      points: 10
+    },
+    {
+      id: "dq3",
+      question: "Which is the longest river in India?",
+      options: ["Yamuna", "Ganga", "Godavari", "Narmada"],
+      correct_answer: 1,
+      explanation: "The Ganga is the longest river in India, flowing for about 2,525 kilometers.",
+      subject: "Geography",
+      subtopic: "Rivers",
+      difficulty: "easy",
+      points: 5
+    },
+    {
+      id: "dq4",
+      question: "What is the current repo rate set by RBI as of 2024?",
+      options: ["6.50%", "6.25%", "6.75%", "7.00%"],
+      correct_answer: 0,
+      explanation: "The Reserve Bank of India has maintained the repo rate at 6.50% to control inflation.",
+      subject: "Economy",
+      subtopic: "Monetary Policy",
+      difficulty: "medium",
+      points: 10
+    },
+    {
+      id: "dq5",
+      question: "Which mission successfully landed on the Moon's south pole in 2023?",
+      options: ["Chandrayaan-2", "Chandrayaan-3", "Mangalyaan", "Aditya L1"],
+      correct_answer: 1,
+      explanation: "Chandrayaan-3 successfully landed on the Moon's south pole in August 2023, making India the fourth country to land on the Moon.",
+      subject: "Science & Technology",
+      subtopic: "Space Missions",
+      difficulty: "easy",
+      points: 5
+    },
+    {
+      id: "dq6",
+      question: "Who founded the Indian National Congress?",
+      options: ["Dadabhai Naoroji", "A.O. Hume", "Bal Gangadhar Tilak", "Gopal Krishna Gokhale"],
+      correct_answer: 1,
+      explanation: "Allan Octavian Hume, a British civil servant, founded the Indian National Congress in 1885.",
+      subject: "History",
+      subtopic: "Freedom Movement",
+      difficulty: "medium",
+      points: 10
+    },
+    {
+      id: "dq7",
+      question: "Which state has the highest literacy rate in India?",
+      options: ["Tamil Nadu", "Maharashtra", "Kerala", "Gujarat"],
+      correct_answer: 2,
+      explanation: "Kerala has the highest literacy rate in India at approximately 93.91% according to the 2011 census.",
+      subject: "Geography",
+      subtopic: "Demographics",
+      difficulty: "medium",
+      points: 10
+    },
+    {
+      id: "dq8",
+      question: "What does GDP stand for?",
+      options: ["Gross Domestic Product", "General Development Program", "Global Development Policy", "Gross Development Product"],
+      correct_answer: 0,
+      explanation: "GDP stands for Gross Domestic Product, which measures the total value of goods and services produced in a country.",
+      subject: "Economy",
+      subtopic: "Economic Indicators",
+      difficulty: "easy",
+      points: 5
+    },
+    {
+      id: "dq9",
+      question: "Which Indian city hosted the G20 Summit in 2023?",
+      options: ["Mumbai", "New Delhi", "Bangalore", "Chennai"],
+      correct_answer: 1,
+      explanation: "New Delhi hosted the G20 Summit in September 2023, with India holding the G20 presidency.",
+      subject: "Current Affairs",
+      subtopic: "International Relations",
+      difficulty: "easy",
+      points: 5
+    },
+    {
+      id: "dq10",
+      question: "Who can remove the President of India from office?",
+      options: ["Prime Minister", "Supreme Court", "Parliament through impeachment", "Council of Ministers"],
+      correct_answer: 2,
+      explanation: "The President can be removed from office through impeachment by Parliament, requiring a special majority in both houses.",
+      subject: "Polity",
+      subtopic: "Constitutional Provisions",
+      difficulty: "hard",
+      points: 15
+    }
+  ];
+};
+
 Deno.serve(async (req: Request) => {
   console.log('🚀 Generate daily quiz function called');
   
@@ -38,6 +154,12 @@ Deno.serve(async (req: Request) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('❌ Missing Supabase configuration');
+      throw new Error('Supabase configuration missing');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Check if quiz already exists for today
@@ -47,6 +169,11 @@ Deno.serve(async (req: Request) => {
       .eq('date', today)
       .eq('is_active', true)
       .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing quiz:', checkError);
+      throw new Error(`Database error: ${checkError.message}`);
+    }
 
     if (existingQuiz) {
       console.log('✅ Quiz already exists for today');
@@ -65,15 +192,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Generate questions using OpenAI
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    // Try to generate questions using OpenAI, fallback to demo questions
     let questions: DailyQuizQuestion[] = [];
+    let generationMethod = 'fallback';
 
-    if (openaiApiKey) {
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')?.trim();
+    
+    if (openaiApiKey && openaiApiKey.length > 0) {
       try {
-        console.log('🤖 Generating questions with OpenAI...');
+        console.log('🤖 Attempting to generate questions with OpenAI...');
         
-        // Get current date for current affairs
         const currentDate = new Date();
         const monthYear = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         
@@ -98,12 +226,6 @@ Requirements:
    - Relevant to Indian competitive exams
    - Clear and unambiguous
    - Have exactly one correct answer
-
-4. For Current Affairs, include recent events like:
-   - Government schemes launched in last 6 months
-   - International summits/conferences India participated in
-   - Recent Supreme Court judgments
-   - New scientific achievements by India
 
 Return a JSON object with "questions" array containing exactly 10 questions in this format:
 {
@@ -147,48 +269,77 @@ Points allocation: easy=5, medium=10, hard=15`;
           }),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('OpenAI response received');
-          
-          const content = JSON.parse(data.choices[0].message.content);
-          const aiQuestions = content.questions || [];
-          
-          // Validate and map questions
-          questions = aiQuestions.map((q: any, index: number) => ({
-            id: `dq${index + 1}`,
-            question: q.question || '',
-            options: Array.isArray(q.options) ? q.options : [],
-            correct_answer: typeof q.correct_answer === 'number' ? q.correct_answer : 0,
-            explanation: q.explanation || '',
-            subject: q.subject || 'General Knowledge',
-            subtopic: q.subtopic || 'Miscellaneous',
-            difficulty: ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'medium',
-            points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10)
-          }));
-          
-          console.log('✅ Generated questions with AI:', questions.length);
-        } else {
+        if (!response.ok) {
           const errorText = await response.text();
           console.error('OpenAI API error:', response.status, errorText);
-          throw new Error(`OpenAI API error: ${response.status}`);
+          throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
         }
+
+        const data = await response.json();
+        console.log('✅ OpenAI response received');
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+          throw new Error('Invalid OpenAI response structure');
+        }
+        
+        const content = JSON.parse(data.choices[0].message.content);
+        const aiQuestions = content.questions || [];
+        
+        if (!Array.isArray(aiQuestions) || aiQuestions.length === 0) {
+          throw new Error('No questions received from OpenAI');
+        }
+        
+        // Validate and map questions
+        questions = aiQuestions.slice(0, 10).map((q: any, index: number) => ({
+          id: `dq${index + 1}`,
+          question: q.question || '',
+          options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+          correct_answer: typeof q.correct_answer === 'number' ? Math.max(0, Math.min(3, q.correct_answer)) : 0,
+          explanation: q.explanation || '',
+          subject: q.subject || 'General Knowledge',
+          subtopic: q.subtopic || 'Miscellaneous',
+          difficulty: ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'medium',
+          points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10)
+        }));
+        
+        // Validate questions have required fields
+        questions = questions.filter(q => 
+          q.question && 
+          Array.isArray(q.options) && 
+          q.options.length === 4 && 
+          q.explanation
+        );
+        
+        if (questions.length >= 10) {
+          generationMethod = 'ai';
+          questions = questions.slice(0, 10);
+          console.log('✅ Generated questions with AI:', questions.length);
+        } else {
+          throw new Error(`Only generated ${questions.length} valid questions, need 10`);
+        }
+        
       } catch (aiError) {
-        console.error('AI generation error:', aiError);
-        throw new Error(`Failed to generate questions with AI: ${aiError.message}`);
+        console.error('❌ AI generation failed:', aiError);
+        console.log('🔄 Falling back to demo questions');
+        questions = getFallbackQuestions();
+        generationMethod = 'fallback';
       }
     } else {
-      console.error('❌ OpenAI API key not found');
-      throw new Error('OpenAI API key not configured');
+      console.log('⚠️ OpenAI API key not found, using fallback questions');
+      questions = getFallbackQuestions();
+      generationMethod = 'fallback';
     }
 
     // Ensure we have exactly 10 questions
     if (questions.length < 10) {
-      throw new Error(`Only generated ${questions.length} questions, need 10`);
-    } else if (questions.length > 10) {
-      questions = questions.slice(0, 10);
+      console.log('⚠️ Not enough questions, padding with fallback');
+      const fallbackQuestions = getFallbackQuestions();
+      while (questions.length < 10 && fallbackQuestions.length > 0) {
+        questions.push(fallbackQuestions[questions.length % fallbackQuestions.length]);
+      }
     }
 
+    questions = questions.slice(0, 10);
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
     
     const dailyQuiz = {
@@ -214,19 +365,21 @@ Points allocation: easy=5, medium=10, hard=15`;
       .single();
 
     if (saveError) {
-      console.error('Error saving quiz:', saveError);
+      console.error('❌ Error saving quiz:', saveError);
       throw new Error(`Failed to save quiz: ${saveError.message}`);
     }
 
     console.log('🎉 Daily quiz generated and saved successfully');
     console.log('📈 Questions count:', questions.length);
+    console.log('🔧 Generation method:', generationMethod);
     console.log('📊 Subjects covered:', dailyQuiz.subjects_covered.join(', '));
 
     return new Response(
       JSON.stringify({
         success: true,
         quiz: savedQuiz,
-        message: 'Daily quiz generated successfully'
+        generation_method: generationMethod,
+        message: `Daily quiz generated successfully using ${generationMethod}`
       }),
       {
         headers: {
@@ -236,21 +389,61 @@ Points allocation: easy=5, medium=10, hard=15`;
       }
     );
   } catch (error) {
-    console.error('💥 Error in generate-daily-quiz:', error);
+    console.error('💥 Critical error in generate-daily-quiz:', error);
     
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Failed to generate daily quiz',
-        message: 'Quiz generation failed'
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
+    // Even if everything fails, try to return fallback questions
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const fallbackQuestions = getFallbackQuestions();
+      
+      const fallbackQuiz = {
+        date: today,
+        questions: fallbackQuestions,
+        total_points: fallbackQuestions.reduce((sum, q) => sum + q.points, 0),
+        difficulty_distribution: {
+          easy: fallbackQuestions.filter(q => q.difficulty === 'easy').length,
+          medium: fallbackQuestions.filter(q => q.difficulty === 'medium').length,
+          hard: fallbackQuestions.filter(q => q.difficulty === 'hard').length
         },
-      }
-    );
+        subjects_covered: [...new Set(fallbackQuestions.map(q => q.subject))],
+        generated_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true
+      };
+
+      console.log('🆘 Returning emergency fallback quiz');
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          quiz: fallbackQuiz,
+          generation_method: 'emergency_fallback',
+          message: 'Daily quiz generated using emergency fallback'
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    } catch (fallbackError) {
+      console.error('💀 Even fallback failed:', fallbackError);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: error.message || 'Failed to generate daily quiz',
+          message: 'Quiz generation failed completely'
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
   }
 });
