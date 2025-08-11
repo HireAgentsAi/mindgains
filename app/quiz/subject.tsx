@@ -275,8 +275,8 @@ export default function SubjectQuizScreen() {
         >
           <Animated.View style={[styles.topicsContainer, topicsAnimatedStyle]}>
             <Text style={styles.sectionTitle}>
-              <FontAwesome5 name="list" size={18} color={theme.colors.accent.purple} solid />
-              <Text> Available Topics</Text>
+              <FontAwesome5 name="book" size={12} color={theme.colors.text.secondary} />
+              <Text> {subjectName} Quiz</Text>
             </Text>
             
             <View style={styles.topicsList}>
