@@ -238,7 +238,7 @@ Join India's #1 AI learning platform:
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>
             <FontAwesome5 name="calendar-check" size={16} color={theme.colors.accent.purple} solid />
-            <Text> Daily Quiz Results</Text>
+            {' '}Daily Quiz Results
           </Text>
           <Text style={styles.headerSubtitle}>{quizDate || 'Today'}</Text>
         </View>

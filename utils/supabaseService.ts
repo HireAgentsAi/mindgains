@@ -870,73 +870,26 @@ export class SupabaseService {
     return data || []
   }
 
-  // Get user quiz statistics
-  static async getUserQuizStats(userId: string) {
-    try {
-      const { data: attempts, error } = await supabase
-        .from('daily_quiz_attempts')
-        .select('correct_answers, total_questions')
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      const totalAttempts = attempts?.length || 0
-      const totalQuestions = attempts?.reduce((sum, a) => sum + a.total_questions, 0) || 0
-      const correctAnswers = attempts?.reduce((sum, a) => sum + a.correct_answers, 0) || 0
-
-      return {
-        totalAttempts,
-        totalQuestions,
-        correctAnswers
-      }
-    } catch (error) {
-      console.error('Error fetching quiz stats:', error)
-      return {
-        totalAttempts: 0,
-        totalQuestions: 0,
-        correctAnswers: 0
-      }
-    }
-  }
-
   // Leaderboard
   static async getLeaderboard(timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'weekly') {
-    try {
-      const { data, error } = await supabase
+    const { data, error } = await supabase
       .from('user_stats')
-      .select('*')
+      .select(`
+        *,
+        profiles:user_id (
+          full_name,
+          avatar_url
+        )
+      `)
       .order('total_xp', { ascending: false })
       .limit(100)
 
-      if (error) {
-        console.error('Error fetching leaderboard:', error)
-        return []
-      }
-
-      // Get profile data separately to avoid relationship issues
-      if (data && data.length > 0) {
-        const userIds = data.map(stat => stat.user_id)
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url')
-          .in('id', userIds)
-
-        // Merge stats with profiles
-        return data.map(stat => {
-          const profile = profiles?.find(p => p.id === stat.user_id)
-          return {
-            ...stat,
-            full_name: profile?.full_name || 'Anonymous',
-            avatar_url: profile?.avatar_url
-          }
-        })
-      }
-
-      return []
-    } catch (error) {
-      console.error('Error in getLeaderboard:', error)
-      return []
+    if (error) {
+      console.error('Error fetching leaderboard:', error)
+      throw error
     }
+
+    return data || []
   }
 
   // Analytics for marketing

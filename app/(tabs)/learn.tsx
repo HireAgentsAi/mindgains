@@ -326,7 +326,8 @@ export default function Learn() {
               colors={[theme.colors.accent.purple]}
               tintColor={theme.colors.accent.purple}
             />
-          }>
+          }
+        >
           {/* Quick Actions */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>

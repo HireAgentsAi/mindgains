@@ -3,515 +3,982 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  TouchableOpacity,
   RefreshControl,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  withSpring,
+  withSequence,
+  withRepeat,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { theme } from '@/constants/theme';
+import MascotAvatar from '@/components/ui/MascotAvatar';
+import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
+import { demoUserStats } from '@/utils/demoData';
 
-const { width } = Dimensions.get('window');
+const { width = 375 } = Dimensions.get('window') || {};
 
 interface UserStats {
-  total_xp: number;
-  current_level: number;
-  streak_days: number;
-  missions_completed: number;
-}
-
-interface LeaderboardEntry {
-  id: string;
-  full_name: string;
-  total_xp: number;
-  current_level: number;
-}
-
-interface QuizStats {
+  currentLevel: number;
+  totalXP: number;
+  streakDays: number;
   totalQuizzes: number;
   accuracy: number;
+  rank: number;
 }
 
-export default function HomePage() {
+interface QuickAction {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: string;
+  gradient: string[];
+  onPress: () => void;
+  badge?: string;
+  isHighlighted?: boolean;
+}
+
+export default function Home() {
   const isMounted = useRef(true);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [quizStats, setQuizStats] = useState<QuizStats>({ totalQuizzes: 0, accuracy: 0 });
-  const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState<UserStats>({
+    currentLevel: 12,
+    totalXP: 8450,
+    streakDays: 15,
+    totalQuizzes: 87,
+    accuracy: 85,
+    rank: 234,
+  });
   const [refreshing, setRefreshing] = useState(false);
+  const [greeting, setGreeting] = useState('');
+  const [mascotRecommendations, setMascotRecommendations] = useState<string[]>([]);
+  const [currentRecommendation, setCurrentRecommendation] = useState(0);
 
-  const fetchUserStats = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: stats } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (stats) {
-        setUserStats(stats);
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-    }
-  };
-
-  const fetchLeaderboard = async () => {
-    try {
-      const { data: stats } = await supabase
-        .from('user_stats')
-        .select('user_id, total_xp, current_level')
-        .order('total_xp', { ascending: false })
-        .limit(5);
-
-      if (stats) {
-        const userIds = stats.map(stat => stat.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', userIds);
-
-        const leaderboardData = stats.map(stat => {
-          const profile = profiles?.find(p => p.id === stat.user_id);
-          return {
-            id: stat.user_id,
-            full_name: profile?.full_name || 'Anonymous',
-            total_xp: stat.total_xp,
-            current_level: stat.current_level,
-          };
-        });
-
-        setLeaderboard(leaderboardData);
-      }
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-    }
-  };
-
-  const fetchQuizStats = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: attempts } = await supabase
-        .from('daily_quiz_attempts')
-        .select('correct_answers, total_questions')
-        .eq('user_id', user.id);
-
-      if (attempts && attempts.length > 0) {
-        const totalQuizzes = attempts.length;
-        const totalCorrect = attempts.reduce((sum, attempt) => sum + attempt.correct_answers, 0);
-        const totalQuestions = attempts.reduce((sum, attempt) => sum + attempt.total_questions, 0);
-        const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
-
-        setQuizStats({ totalQuizzes, accuracy });
-      }
-    } catch (error) {
-      console.error('Error fetching quiz stats:', error);
-    }
-  };
-
-  const loadData = async () => {
-    await Promise.all([
-      fetchUserStats(),
-      fetchLeaderboard(),
-      fetchQuizStats(),
-    ]);
-    setLoading(false);
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  // Animation values
+  const fadeIn = useSharedValue(0);
+  const headerScale = useSharedValue(0.9);
+  const progressScale = useSharedValue(0.8);
+  const actionsOpacity = useSharedValue(0);
+  const mascotScale = useSharedValue(1);
+  const shimmerPosition = useSharedValue(-1);
+  const streakPulse = useSharedValue(1);
 
   useEffect(() => {
     isMounted.current = true;
-    loadData();
+    loadUserData();
+    setGreeting(getTimeBasedGreeting());
+    startAnimations();
+    
+    // Cycle through recommendations
+    const interval = setInterval(() => {
+      setCurrentRecommendation(prev => (prev + 1) % Math.max(mascotRecommendations.length, 1));
+    }, 5000);
     
     return () => {
       isMounted.current = false;
+      clearInterval(interval);
     };
-  }, []);
+  }, [mascotRecommendations.length]);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading your MindGains...</Text>
-      </View>
+  const startAnimations = () => {
+    fadeIn.value = withTiming(1, { duration: 800 });
+    headerScale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    progressScale.value = withSpring(1, { damping: 12, stiffness: 120 });
+    actionsOpacity.value = withTiming(1, { duration: 600, delay: 400 });
+    
+    // Continuous animations
+    mascotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
     );
-  }
+    
+    streakPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 1000 }),
+        withTiming(1, { duration: 1000 })
+      ),
+      -1,
+      true
+    );
+    
+    shimmerPosition.value = withRepeat(
+      withTiming(1, { duration: 2000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  };
+
+  const loadUserData = async () => {
+    try {
+      if (!isMounted.current) return;
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
+        // Use demo data
+        setUserStats({
+          currentLevel: demoUserStats.current_level,
+          totalXP: demoUserStats.total_xp,
+          streakDays: demoUserStats.streak_days,
+          totalQuizzes: 87,
+          accuracy: 85,
+          rank: 234,
+        });
+        
+        setMascotRecommendations([
+          "Ready to conquer today's quiz? 🚀",
+          "Your streak is on fire! Keep it going! 🔥",
+          "Time to level up your knowledge! 📚"
+        ]);
+        return;
+      }
+      
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
+
+      const [stats, recommendations] = await Promise.all([
+        SupabaseService.getUserStats(user.id),
+        SupabaseService.getMascotRecommendations(user.id)
+      ]);
+
+      if (!isMounted.current) return;
+
+      if (stats) {
+        setUserStats({
+          currentLevel: stats.current_level,
+          totalXP: stats.total_xp,
+          streakDays: stats.streak_days,
+          totalQuizzes: 87, // This would come from quiz attempts count
+          accuracy: 85, // This would be calculated from quiz results
+          rank: 234, // This would come from leaderboard position
+        });
+      }
+      
+      setMascotRecommendations(recommendations);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      if (!isMounted.current) return;
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserData().finally(() => setRefreshing(false));
+  };
+
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const quickActions: QuickAction[] = [
+    {
+      id: 'daily',
+      title: 'Daily Quiz',
+      subtitle: 'Fresh questions every day',
+      icon: 'calendar-day',
+      gradient: [theme.colors.accent.purple, theme.colors.accent.blue],
+      onPress: () => router.push('/quiz/daily'),
+      badge: 'NEW',
+      isHighlighted: true,
+    },
+    {
+      id: 'topic',
+      title: 'Topic Quiz',
+      subtitle: 'Focus on specific subjects',
+      icon: 'bullseye',
+      gradient: [theme.colors.accent.green, theme.colors.accent.cyan],
+      onPress: () => router.push('/quiz/topic'),
+    },
+    {
+      id: 'create',
+      title: 'Create Mission',
+      subtitle: 'Transform content to learning',
+      icon: 'magic',
+      gradient: [theme.colors.accent.yellow, theme.colors.accent.green],
+      onPress: () => router.push('/mission/create'),
+    },
+    {
+      id: 'leaderboard',
+      title: 'Leaderboard',
+      subtitle: 'Compete with friends',
+      icon: 'trophy',
+      gradient: [theme.colors.accent.pink, theme.colors.accent.purple],
+      onPress: () => router.push('/(tabs)/leaderboard'),
+    },
+  ];
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeIn.value,
+    transform: [{ translateY: interpolate(fadeIn.value, [0, 1], [30, 0]) }],
+  }));
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: headerScale.value }],
+  }));
+
+  const progressAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: progressScale.value }],
+  }));
+
+  const actionsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: actionsOpacity.value,
+    transform: [{ translateY: interpolate(actionsOpacity.value, [0, 1], [20, 0]) }],
+  }));
+
+  const mascotAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: mascotScale.value }],
+  }));
+
+  const streakAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: streakPulse.value }],
+  }));
+
+  const shimmerAnimatedStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(
+      shimmerPosition.value,
+      [-1, 1],
+      [-width * 1.5, width * 1.5]
+    );
+    
+    return {
+      transform: [{ translateX }],
+    };
+  });
 
   return (
-    <ScrollView
+    <LinearGradient
+      colors={[
+        theme.colors.background.primary,
+        theme.colors.background.secondary,
+        theme.colors.background.tertiary,
+      ]}
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <LinearGradient colors={['#FF6B35', '#F7931E']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.greeting}>Namaste, MindGainer!</Text>
-          <Text style={styles.subtitle}>Ready to flex your brain today?</Text>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <FontAwesome5 name="trophy" size={24} color="#FF6B35" />
-          <Text style={styles.statValue}>{userStats?.total_xp || 0}</Text>
-          <Text style={styles.statLabel}>Total XP</Text>
-        </View>
-        <View style={styles.statCard}>
-          <FontAwesome5 name="fire" size={24} color="#E74C3C" />
-          <Text style={styles.statValue}>{userStats?.streak_days || 0}</Text>
-          <Text style={styles.statLabel}>Day Streak</Text>
-        </View>
-        <View style={styles.statCard}>
-          <FontAwesome5 name="medal" size={24} color="#F39C12" />
-          <Text style={styles.statValue}>{userStats?.current_level || 1}</Text>
-          <Text style={styles.statLabel}>Level</Text>
-        </View>
-      </View>
-
-      <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>
-          <FontAwesome5 name="bolt" size={16} color="#FF6B35" />
-          <Text> Quick Actions</Text>
-        </Text>
-        <View style={styles.actionGrid}>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#FF6B35' }]}
-            onPress={() => router.push('/quiz/daily')}
-          >
-            <FontAwesome5 name="calendar-day" size={24} color="white" />
-            <Text style={styles.actionText}>Daily Quiz</Text>
-            <Text style={styles.actionSubtext}>Earn 100 XP</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#8E44AD' }]}
-            onPress={() => router.push('/quiz/subject')}
-          >
-            <FontAwesome5 name="brain" size={24} color="white" />
-            <Text style={styles.actionText}>Subject Quiz</Text>
-            <Text style={styles.actionSubtext}>Test Knowledge</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#27AE60' }]}
-            onPress={() => router.push('/(tabs)/learn')}
-          >
-            <FontAwesome5 name="book-open" size={24} color="white" />
-            <Text style={styles.actionText}>Learn</Text>
-            <Text style={styles.actionSubtext}>New Missions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#E67E22' }]}
-            onPress={() => router.push('/(tabs)/leaderboard')}
-          >
-            <FontAwesome5 name="crown" size={24} color="white" />
-            <Text style={styles.actionText}>Leaderboard</Text>
-            <Text style={styles.actionSubtext}>See Rankings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.progressSection}>
-        <Text style={styles.sectionTitle}>
-          <FontAwesome5 name="chart-line" size={16} color="#FF6B35" />
-          <Text> Your Progress</Text>
-        </Text>
-        <View style={styles.progressCard}>
-          <View style={styles.progressItem}>
-            <Text style={styles.progressLabel}>Missions Completed</Text>
-            <Text style={styles.progressValue}>{userStats?.missions_completed || 0}</Text>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      <SafeAreaView style={styles.safeArea}>
+        {/* Enhanced Header */}
+        <Animated.View style={[styles.header, headerAnimatedStyle]}>
+          <View style={styles.headerContent}>
+            <View style={styles.greetingSection}>
+              <Text style={styles.greeting}>{greeting}!</Text>
+              <Text style={styles.subtitle}>Ready to gain some mind power?</Text>
+            </View>
+            
+            <View style={styles.headerRight}>
+              <Animated.View style={mascotAnimatedStyle}>
+                <MascotAvatar
+                  size={60}
+                  animated={true}
+                  glowing={true}
+                  mood="happy"
+                />
+              </Animated.View>
+              
+              <LinearGradient
+                colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+                style={styles.brainContainer}
+              >
+                <FontAwesome5 name="brain" size={24} color={theme.colors.text.primary} solid />
+              </LinearGradient>
+            </View>
           </View>
-          <View style={styles.progressItem}>
-            <Text style={styles.progressLabel}>Quiz Accuracy</Text>
-            <Text style={styles.progressValue}>{quizStats.accuracy}%</Text>
-          </View>
-          <View style={styles.progressItem}>
-            <Text style={styles.progressLabel}>Total Quizzes</Text>
-            <Text style={styles.progressValue}>{quizStats.totalQuizzes}</Text>
-          </View>
-        </View>
-      </View>
+          
+          {/* Mascot Recommendations */}
+          {mascotRecommendations.length > 0 && (
+            <View style={styles.recommendationBubble}>
+              <LinearGradient
+                colors={[theme.colors.background.glass, theme.colors.background.card]}
+                style={styles.recommendationGradient}
+              >
+                <FontAwesome5 name="lightbulb" size={14} color={theme.colors.accent.yellow} solid />
+                <Text style={styles.recommendationText}>
+                  {mascotRecommendations[currentRecommendation]}
+                </Text>
+              </LinearGradient>
+            </View>
+          )}
+        </Animated.View>
 
-      {leaderboard.length > 0 && (
-        <View style={styles.leaderboardPreview}>
-          <Text style={styles.sectionTitle}>
-            <FontAwesome5 name="trophy" size={16} color="#FF6B35" />
-            <Text> Top Performers</Text>
-          </Text>
-          {leaderboard.slice(0, 3).map((user, index) => (
-            <View key={user.id} style={styles.leaderboardItem}>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankText}>{index + 1}</Text>
+        {/* Enhanced Progress Card */}
+        <Animated.View style={[styles.progressSection, progressAnimatedStyle]}>
+          <LinearGradient
+            colors={[theme.colors.accent.purple, theme.colors.accent.blue, theme.colors.accent.cyan]}
+            style={styles.progressCard}
+          >
+            {/* Shimmer effect */}
+            <View style={styles.shimmerContainer}>
+              <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.2)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.shimmerGradient}
+                />
+              </Animated.View>
+            </View>
+            
+            <View style={styles.progressContent}>
+              <View style={styles.levelRow}>
+                <View style={styles.levelBadge}>
+                  <FontAwesome5 name="crown" size={16} color={theme.colors.text.primary} solid />
+                  <Text style={styles.levelText}>Level {userStats.currentLevel}</Text>
+                </View>
+                
+                <Animated.View style={[styles.streakBadge, streakAnimatedStyle]}>
+                  <FontAwesome5 name="fire" size={14} color={theme.colors.text.primary} solid />
+                  <Text style={styles.streakText}>{userStats.streakDays}</Text>
+                </Animated.View>
               </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user.full_name}</Text>
-                <Text style={styles.userXP}>{user.total_xp} XP</Text>
+              
+              <View style={styles.xpSection}>
+                <Text style={styles.xpText}>
+                  {userStats.totalXP.toLocaleString()} XP
+                </Text>
+                <Text style={styles.rankText}>
+                  <FontAwesome5 name="chart-line" size={12} color={theme.colors.text.primary} solid />
+                  {' '}Rank #{userStats.rank}
+                </Text>
               </View>
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>L{user.current_level}</Text>
+              
+              <View style={styles.progressBarSection}>
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
+                    style={[styles.progressFill, { width: '65%' }]}
+                  />
+                </View>
+                <Text style={styles.progressLabel}>
+                  <FontAwesome5 name="arrow-up" size={10} color={theme.colors.text.primary} solid />
+                  {' '}450 XP to Level {userStats.currentLevel + 1}
+                </Text>
               </View>
             </View>
-          ))}
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => router.push('/(tabs)/leaderboard')}
-          >
-            <Text style={styles.viewAllText}>View Full Leaderboard</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          </LinearGradient>
+        </Animated.View>
 
-      <View style={styles.motivationCard}>
-        <LinearGradient colors={['#8E44AD', '#3498DB']} style={styles.motivationGradient}>
-          <FontAwesome5 name="rocket" size={32} color="white" />
-          <Text style={styles.motivationTitle}>Keep Going, Champion!</Text>
-          <Text style={styles.motivationText}>
-            Every question you answer makes you smarter. India needs brilliant minds like yours!
-          </Text>
+        {/* Enhanced Content */}
+        <Animated.View style={[styles.content, animatedStyle]}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.colors.accent.purple]}
+                tintColor={theme.colors.accent.purple}
+              />
+            }
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* Enhanced Stats Grid */}
+            <View style={styles.statsSection}>
+              <Text style={styles.sectionTitle}>
+                <FontAwesome5 name="chart-pie" size={18} color={theme.colors.accent.blue} solid />
+                {' '}Your Progress
+              </Text>
+              
+              <View style={styles.statsGrid}>
+                <EnhancedStatCard 
+                  icon="bullseye" 
+                  label="Accuracy" 
+                  value={`${userStats.accuracy}%`} 
+                  color={theme.colors.accent.green}
+                  trend="+5%"
+                />
+                <EnhancedStatCard 
+                  icon="trophy" 
+                  label="Rank" 
+                  value={`#${userStats.rank}`} 
+                  color={theme.colors.accent.gold}
+                  trend="↑12"
+                />
+                <EnhancedStatCard 
+                  icon="book-open" 
+                  label="Quizzes" 
+                  value={userStats.totalQuizzes.toString()} 
+                  color={theme.colors.accent.purple}
+                  trend="+3"
+                />
+                <EnhancedStatCard 
+                  icon="fire" 
+                  label="Streak" 
+                  value={`${userStats.streakDays}d`} 
+                  color={theme.colors.accent.yellow}
+                  trend="🔥"
+                />
+              </View>
+            </View>
+
+            {/* Enhanced Quick Actions */}
+            <Animated.View style={[styles.actionsSection, actionsAnimatedStyle]}>
+              <Text style={styles.sectionTitle}>
+                <FontAwesome5 name="rocket" size={18} color={theme.colors.accent.purple} solid />
+                {' '}Start Learning
+              </Text>
+              
+              <View style={styles.actionsContainer}>
+                {quickActions.map((action, index) => (
+                  <EnhancedActionCard
+                    key={action.id}
+                    action={action}
+                    index={index}
+                  />
+                ))}
+              </View>
+            </Animated.View>
+
+            {/* Enhanced Activity Feed */}
+            <View style={styles.activitySection}>
+              <Text style={styles.sectionTitle}>
+                <FontAwesome5 name="history" size={18} color={theme.colors.accent.cyan} solid />
+                {' '}Recent Activity
+              </Text>
+              
+              <View style={styles.activityCard}>
+                <ActivityItem
+                  icon="trophy"
+                  title="Perfect Score!"
+                  subtitle="Daily Quiz • 2 hours ago"
+                  points="+50 XP"
+                  color={theme.colors.accent.green}
+                />
+                
+                <ActivityItem
+                  icon="crown"
+                  title="Level Up!"
+                  subtitle="Reached Level 12 • Yesterday"
+                  points="+100 XP"
+                  color={theme.colors.accent.gold}
+                />
+                
+                <ActivityItem
+                  icon="fire"
+                  title="Streak Master"
+                  subtitle="15 day streak • 2 days ago"
+                  points="+75 XP"
+                  color={theme.colors.accent.yellow}
+                />
+                
+                <ActivityItem
+                  icon="users"
+                  title="Friend Challenge Victory"
+                  subtitle="Beat Priya in History • 3 days ago"
+                  points="+60 XP"
+                  color={theme.colors.accent.purple}
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </SafeAreaView>
+    </LinearGradient>
+  );
+}
+
+function EnhancedStatCard({ icon, label, value, color, trend }: {
+  icon: string;
+  label: string;
+  value: string;
+  color: string;
+  trend?: string;
+}) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 600 });
+    scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.statCard, animatedStyle]}>
+      <LinearGradient
+        colors={[color + '20', color + '10']}
+        style={styles.statCardGradient}
+      >
+        <View style={[styles.statIcon, { backgroundColor: color + '30' }]}>
+          <FontAwesome5 name={icon} size={20} color={color} solid />
+        </View>
+        
+        <View style={styles.statContent}>
+          <Text style={styles.statValue}>{value}</Text>
+          <Text style={styles.statLabel}>{label}</Text>
+          
+          {trend && (
+            <View style={styles.trendContainer}>
+              <Text style={[styles.trendText, { color }]}>{trend}</Text>
+            </View>
+          )}
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+function EnhancedActionCard({ action, index }: {
+  action: QuickAction;
+  index: number;
+}) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    setTimeout(() => {
+      opacity.value = withTiming(1, { duration: 400 });
+      scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    }, index * 150);
+  }, [index]);
+
+  const handlePress = () => {
+    scale.value = withSequence(
+      withTiming(0.95, { duration: 100 }),
+      withSpring(1, { damping: 15, stiffness: 120 })
+    );
+    action.onPress();
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.actionCard, animatedStyle]}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+        <LinearGradient
+          colors={action.gradient}
+          style={[styles.actionGradient, action.isHighlighted && styles.highlightedAction]}
+        >
+          {action.badge && (
+            <View style={styles.actionBadge}>
+              <Text style={styles.actionBadgeText}>{action.badge}</Text>
+            </View>
+          )}
+          
+          <View style={styles.actionContent}>
+            <View style={styles.actionIcon}>
+              <FontAwesome5 name={action.icon} size={24} color={theme.colors.text.primary} solid />
+            </View>
+            
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>{action.title}</Text>
+              <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
+            </View>
+            
+            <View style={styles.actionArrow}>
+              <FontAwesome5 name="chevron-right" size={16} color={theme.colors.text.primary} />
+            </View>
+          </View>
         </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+function ActivityItem({ icon, title, subtitle, points, color }: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  points: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.activityItem}>
+      <View style={[styles.activityIcon, { backgroundColor: color }]}>
+        <FontAwesome5 name={icon} size={16} color={theme.colors.text.primary} solid />
       </View>
-    </ScrollView>
+      
+      <View style={styles.activityContent}>
+        <Text style={styles.activityTitle}>{title}</Text>
+        <Text style={styles.activityTime}>{subtitle}</Text>
+      </View>
+      
+      <View style={styles.activityPoints}>
+        <FontAwesome5 name="coins" size={12} color={theme.colors.accent.yellow} solid />
+        <Text style={styles.activityPointsText}>{points}</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
-  loadingContainer: {
+  safeArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: '600',
+    paddingTop: 20,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  greetingSection: {
+    flex: 1,
   },
   greeting: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginTop: 8,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.xs,
   },
-  statsContainer: {
+  headerRight: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginTop: -20,
-    marginBottom: 30,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    minWidth: 80,
+    gap: theme.spacing.md,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginTop: 8,
+  brainContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.glow,
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 4,
+  recommendationBubble: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  recommendationGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+  },
+  recommendationText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  progressSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  progressCard: {
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    ...theme.shadows.card,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  shimmerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    width: width * 2,
+    height: 200,
+    opacity: 0.3,
+  },
+  shimmerGradient: {
+    flex: 1,
+  },
+  progressContent: {
+    gap: theme.spacing.lg,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    gap: theme.spacing.xs,
+  },
+  levelText: {
+    color: theme.colors.text.primary,
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    gap: theme.spacing.xs,
+  },
+  streakText: {
+    color: theme.colors.text.primary,
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+  },
+  xpSection: {
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  xpText: {
+    fontSize: 36,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
+  rankText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.primary,
+    opacity: 0.9,
+  },
+  progressBarSection: {
+    gap: theme.spacing.sm,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: theme.borderRadius.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: theme.borderRadius.sm,
+  },
+  progressLabel: {
+    color: theme.colors.text.primary,
     textAlign: 'center',
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    opacity: 0.9,
   },
-  quickActions: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  statsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.lg,
   },
-  actionGrid: {
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: theme.spacing.md,
   },
-  actionCard: {
-    width: (width - 50) / 2,
-    padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  actionText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  actionSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  progressSection: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  progressCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  progressItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECF0F1',
-  },
-  progressLabel: {
-    fontSize: 16,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  progressValue: {
-    fontSize: 18,
-    color: '#FF6B35',
-    fontWeight: 'bold',
-  },
-  leaderboardPreview: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  leaderboardItem: {
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  rankBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  rankText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  userXP: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginTop: 2,
-  },
-  levelBadge: {
-    backgroundColor: '#8E44AD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  levelText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  viewAllButton: {
-    backgroundColor: '#FF6B35',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  viewAllText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  motivationCard: {
-    marginHorizontal: 20,
-    marginBottom: 30,
-    borderRadius: 15,
+  statCard: {
+    width: '47%',
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
   },
-  motivationGradient: {
-    padding: 25,
+  statCardGradient: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+    borderRadius: theme.borderRadius.lg,
+  },
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  statContent: {
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  trendContainer: {
+    backgroundColor: theme.colors.background.tertiary,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.sm,
+  },
+  trendText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.caption,
+    fontWeight: 'bold',
+  },
+  actionsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  actionsContainer: {
+    gap: theme.spacing.md,
+  },
+  actionCard: {
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  actionGradient: {
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.card,
+    position: 'relative',
+  },
+  highlightedAction: {
+    ...theme.shadows.glow,
+  },
+  actionBadge: {
+    position: 'absolute',
+    top: theme.spacing.sm,
+    right: theme.spacing.sm,
+    backgroundColor: theme.colors.accent.yellow,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.sm,
+    zIndex: 1,
+  },
+  actionBadgeText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.inverse,
+    fontWeight: 'bold',
+  },
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  motivationTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 15,
-    textAlign: 'center',
+  actionText: {
+    flex: 1,
   },
-  motivationText: {
+  actionTitle: {
+    fontSize: 18,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  actionSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginTop: 10,
-    lineHeight: 20,
+    fontFamily: theme.fonts.caption,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  actionArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activitySection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  activityCard: {
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+    ...theme.shadows.card,
+    gap: theme.spacing.md,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  activityTime: {
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+  },
+  activityPoints: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  activityPointsText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.accent.yellow,
   },
 });

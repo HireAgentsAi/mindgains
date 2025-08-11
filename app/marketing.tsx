@@ -211,7 +211,8 @@ Download now: https://mindgains.ai
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Hero Section */}
         <Animated.View style={[styles.heroSection, heroAnimatedStyle]}>
           <Animated.View style={floatingAnimatedStyle}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -275,8 +275,8 @@ export default function SubjectQuizScreen() {
         >
           <Animated.View style={[styles.topicsContainer, topicsAnimatedStyle]}>
             <Text style={styles.sectionTitle}>
-              <FontAwesome5 name="book" size={12} color={theme.colors.text.secondary} />
-              <Text> {subjectName} Quiz</Text>
+              <FontAwesome5 name="list" size={18} color={theme.colors.accent.purple} solid />
+              {' '}Available Topics
             </Text>
             
             <View style={styles.topicsList}>

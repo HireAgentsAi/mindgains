@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import Animated, {
   withSpring,
   withSequence,
   withDelay,
-  withRepeat,
   Easing,
   interpolate,
 } from 'react-native-reanimated';

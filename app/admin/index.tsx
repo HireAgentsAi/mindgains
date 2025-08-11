@@ -234,10 +234,12 @@ export default function AdminPanelScreen() {
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={() => router.back()}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+        >
           <LinearGradient
             colors={[theme.colors.background.card, theme.colors.background.secondary]}
-            style={styles.backButtonGradient}>
+            style={styles.backButtonGradient}
+          >
             <ChevronLeft size={24} color={theme.colors.text.primary} />
           </LinearGradient>
         </TouchableOpacity>
@@ -268,7 +270,8 @@ export default function AdminPanelScreen() {
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Admin Stats */}
         <Animated.View style={[styles.statsContainer, cardAnimatedStyle]}>
           <LinearGradient

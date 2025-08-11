@@ -333,10 +333,12 @@ export default function SubscriptionScreen() {
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={() => router.back()}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+        >
           <LinearGradient
             colors={[theme.colors.background.card, theme.colors.background.secondary]}
-            style={styles.backButtonGradient}>
+            style={styles.backButtonGradient}
+          >
             <ArrowLeft size={24} color={theme.colors.text.primary} />
           </LinearGradient>
         </TouchableOpacity>
@@ -358,7 +360,8 @@ export default function SubscriptionScreen() {
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Current Usage */}
         {userLimits && (
           <Animated.View style={[styles.usageContainer, plansAnimatedStyle]}>

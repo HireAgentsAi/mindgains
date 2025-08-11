@@ -481,7 +481,7 @@ Join India's #1 AI learning platform:
             <Animated.View style={[styles.statsSection, statsAnimatedStyle]}>
               <Text style={styles.sectionTitle}>
                 <FontAwesome5 name="chart-bar" size={18} color={theme.colors.accent.blue} solid />
-                <Text>Your Progress</Text>
+                {' '}Your Progress
               </Text>
               
               <View style={styles.statsGrid}>
@@ -521,7 +521,7 @@ Join India's #1 AI learning platform:
               <View style={styles.achievementsHeader}>
                 <Text style={styles.sectionTitle}>
                   <FontAwesome5 name="trophy" size={18} color={theme.colors.accent.gold} solid />
-                  <Text>Achievements</Text>
+                  {' '}Achievements
                 </Text>
                 <Text style={styles.achievementsCount}>
                   {achievements.filter(a => a.unlocked).length}/{achievements.length}
@@ -543,7 +543,7 @@ Join India's #1 AI learning platform:
             <View style={styles.settingsSection}>
               <Text style={styles.sectionTitle}>
                 <FontAwesome5 name="cog" size={18} color={theme.colors.accent.purple} solid />
-                <Text>Settings & Actions</Text>
+                {' '}Settings & Actions
               </Text>
               
               <View style={styles.settingsCard}>
