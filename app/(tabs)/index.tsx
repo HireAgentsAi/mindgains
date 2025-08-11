@@ -27,7 +27,6 @@ import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
-import { demoUserStats } from '@/utils/demoData';
 
 const { width = 375 } = Dimensions.get('window') || {};
 
@@ -53,18 +52,12 @@ interface QuickAction {
 
 export default function Home() {
   const isMounted = useRef(true);
-  const [userStats, setUserStats] = useState<UserStats>({
-    currentLevel: 12,
-    totalXP: 8450,
-    streakDays: 15,
-    totalQuizzes: 87,
-    accuracy: 85,
-    rank: 234,
-  });
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [mascotRecommendations, setMascotRecommendations] = useState<string[]>([]);
   const [currentRecommendation, setCurrentRecommendation] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Animation values
   const fadeIn = useSharedValue(0);
@@ -127,26 +120,6 @@ export default function Home() {
   const loadUserData = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        if (!isMounted.current) return;
-        // Use demo data
-        setUserStats({
-          currentLevel: demoUserStats.current_level,
-          totalXP: demoUserStats.total_xp,
-          streakDays: demoUserStats.streak_days,
-          totalQuizzes: 87,
-          accuracy: 85,
-          rank: 234,
-        });
-        
-        setMascotRecommendations([
-          "Ready to conquer today's quiz? 🚀",
-          "Your streak is on fire! Keep it going! 🔥",
-          "Time to level up your knowledge! 📚"
-        ]);
-        return;
-      }
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
@@ -155,29 +128,43 @@ export default function Home() {
         return;
       }
 
-      const [stats, recommendations] = await Promise.all([
+      const [stats, recommendations, quizAttempts] = await Promise.all([
         SupabaseService.getUserStats(user.id),
-        SupabaseService.getMascotRecommendations(user.id)
+        SupabaseService.getMascotRecommendations(user.id),
+        SupabaseService.getUserQuizStats(user.id)
       ]);
 
       if (!isMounted.current) return;
 
       if (stats) {
+        // Calculate accuracy from real quiz attempts
+        const accuracy = quizAttempts.totalQuestions > 0 
+          ? Math.round((quizAttempts.correctAnswers / quizAttempts.totalQuestions) * 100)
+          : 0;
+        
+        // Get rank from leaderboard position
+        const leaderboard = await SupabaseService.getLeaderboard();
+        const userRank = leaderboard.findIndex(u => u.user_id === user.id) + 1;
+        
         setUserStats({
           currentLevel: stats.current_level,
           totalXP: stats.total_xp,
           streakDays: stats.streak_days,
-          totalQuizzes: 87, // This would come from quiz attempts count
-          accuracy: 85, // This would be calculated from quiz results
-          rank: 234, // This would come from leaderboard position
+          totalQuizzes: quizAttempts.totalAttempts,
+          accuracy: accuracy,
+          rank: userRank || 0,
         });
       }
       
       setMascotRecommendations(recommendations);
     } catch (error) {
       console.error('Error loading user data:', error);
+      // If there's an error, don't show any data
+      setUserStats(null);
+      setMascotRecommendations([]);
     } finally {
       if (!isMounted.current) return;
+      setIsLoading(false);
     }
   };
 
@@ -268,6 +255,44 @@ export default function Home() {
     };
   });
 
+  if (isLoading) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <View style={styles.loadingContainer}>
+          <MascotAvatar size={80} animated={true} glowing={true} mood="focused" />
+          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (!userStats) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Unable to load user data</Text>
+          <GradientButton
+            title="Try Again"
+            onPress={loadUserData}
+            size="medium"
+          />
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient
       colors={[
@@ -279,7 +304,7 @@ export default function Home() {
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         {/* Enhanced Header */}
         <Animated.View style={[styles.header, headerAnimatedStyle]}>
           <View style={styles.headerContent}>
@@ -358,22 +383,35 @@ export default function Home() {
                 <Text style={styles.xpText}>
                   {userStats.totalXP.toLocaleString()} XP
                 </Text>
-                <Text style={styles.rankText}>
-                  <FontAwesome5 name="chart-line" size={12} color={theme.colors.text.primary} solid />
-                  {' '}Rank #{userStats.rank}
-                </Text>
+                {userStats.rank > 0 && (
+                  <Text style={styles.rankText}>
+                    <FontAwesome5 name="chart-line" size={12} color={theme.colors.text.primary} solid />
+                    {' '}Rank #{userStats.rank}
+                  </Text>
+                )}
               </View>
               
               <View style={styles.progressBarSection}>
                 <View style={styles.progressBar}>
+                  {(() => {
+                    const currentLevelXP = (userStats.currentLevel - 1) * 1000;
+                    const nextLevelXP = userStats.currentLevel * 1000;
+                    const progress = ((userStats.totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+                    const xpToNext = nextLevelXP - userStats.totalXP;
+                    
+                    return (
+                      <>
                   <LinearGradient
                     colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
-                    style={[styles.progressFill, { width: '65%' }]}
+                          style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
                   />
+                      </>
+                    );
+                  })()}
                 </View>
                 <Text style={styles.progressLabel}>
                   <FontAwesome5 name="arrow-up" size={10} color={theme.colors.text.primary} solid />
-                  {' '}450 XP to Level {userStats.currentLevel + 1}
+                  {' '}{Math.max(0, (userStats.currentLevel * 1000) - userStats.totalXP)} XP to Level {userStats.currentLevel + 1}
                 </Text>
               </View>
             </View>
@@ -407,28 +445,28 @@ export default function Home() {
                   label="Accuracy" 
                   value={`${userStats.accuracy}%`} 
                   color={theme.colors.accent.green}
-                  trend="+5%"
+                  trend={userStats.accuracy > 70 ? "+5%" : ""}
                 />
                 <EnhancedStatCard 
                   icon="trophy" 
                   label="Rank" 
-                  value={`#${userStats.rank}`} 
+                  value={userStats.rank > 0 ? `#${userStats.rank}` : "Unranked"} 
                   color={theme.colors.accent.gold}
-                  trend="↑12"
+                  trend=""
                 />
                 <EnhancedStatCard 
                   icon="book-open" 
                   label="Quizzes" 
                   value={userStats.totalQuizzes.toString()} 
                   color={theme.colors.accent.purple}
-                  trend="+3"
+                  trend=""
                 />
                 <EnhancedStatCard 
                   icon="fire" 
                   label="Streak" 
                   value={`${userStats.streakDays}d`} 
                   color={theme.colors.accent.yellow}
-                  trend="🔥"
+                  trend={userStats.streakDays > 7 ? "🔥" : ""}
                 />
               </View>
             </View>
@@ -451,50 +489,9 @@ export default function Home() {
               </View>
             </Animated.View>
 
-            {/* Enhanced Activity Feed */}
-            <View style={styles.activitySection}>
-              <Text style={styles.sectionTitle}>
-                <FontAwesome5 name="history" size={18} color={theme.colors.accent.cyan} solid />
-                {' '}Recent Activity
-              </Text>
-              
-              <View style={styles.activityCard}>
-                <ActivityItem
-                  icon="trophy"
-                  title="Perfect Score!"
-                  subtitle="Daily Quiz • 2 hours ago"
-                  points="+50 XP"
-                  color={theme.colors.accent.green}
-                />
-                
-                <ActivityItem
-                  icon="crown"
-                  title="Level Up!"
-                  subtitle="Reached Level 12 • Yesterday"
-                  points="+100 XP"
-                  color={theme.colors.accent.gold}
-                />
-                
-                <ActivityItem
-                  icon="fire"
-                  title="Streak Master"
-                  subtitle="15 day streak • 2 days ago"
-                  points="+75 XP"
-                  color={theme.colors.accent.yellow}
-                />
-                
-                <ActivityItem
-                  icon="users"
-                  title="Friend Challenge Victory"
-                  subtitle="Beat Priya in History • 3 days ago"
-                  points="+60 XP"
-                  color={theme.colors.accent.purple}
-                />
-              </View>
-            </View>
           </ScrollView>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }
@@ -604,38 +601,37 @@ function EnhancedActionCard({ action, index }: {
   );
 }
 
-function ActivityItem({ icon, title, subtitle, points, color }: {
-  icon: string;
-  title: string;
-  subtitle: string;
-  points: string;
-  color: string;
-}) {
-  return (
-    <View style={styles.activityItem}>
-      <View style={[styles.activityIcon, { backgroundColor: color }]}>
-        <FontAwesome5 name={icon} size={16} color={theme.colors.text.primary} solid />
-      </View>
-      
-      <View style={styles.activityContent}>
-        <Text style={styles.activityTitle}>{title}</Text>
-        <Text style={styles.activityTime}>{subtitle}</Text>
-      </View>
-      
-      <View style={styles.activityPoints}>
-        <FontAwesome5 name="coins" size={12} color={theme.colors.accent.yellow} solid />
-        <Text style={styles.activityPointsText}>{points}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
+    paddingTop: 50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  errorText: {
+    fontSize: 18,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+    textAlign: 'center',
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
@@ -930,54 +926,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  activitySection: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-  },
-  activityCard: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.borderRadius.xl,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
-    ...theme.shadows.card,
-    gap: theme.spacing.md,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.borderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontFamily: theme.fonts.subheading,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  activityTime: {
-    fontSize: 12,
-    fontFamily: theme.fonts.caption,
-    color: theme.colors.text.secondary,
-  },
-  activityPoints: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  activityPointsText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.subheading,
-    color: theme.colors.accent.yellow,
   },
 });
