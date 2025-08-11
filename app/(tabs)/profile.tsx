@@ -356,7 +356,7 @@ Join India's #1 AI learning platform:
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         {/* Enhanced Header */}
         <View style={styles.header}>
           <LinearGradient
@@ -379,8 +379,11 @@ Join India's #1 AI learning platform:
           </TouchableOpacity>
         </View>
 
-        <Animated.View style={[styles.content, animatedStyle]}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          style={[styles.content, animatedStyle]}
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+        >
             {/* Enhanced Profile Card */}
             <Animated.View style={[styles.profileSection, headerAnimatedStyle]}>
               <LinearGradient
@@ -591,9 +594,8 @@ Join India's #1 AI learning platform:
                 />
               </View>
             </View>
-          </ScrollView>
-        </Animated.View>
-      </SafeAreaView>
+        </ScrollView>
+      </View>
     </LinearGradient>
   );
 }
@@ -794,6 +796,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
