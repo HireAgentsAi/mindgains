@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # MindGains AI - Edge Functions Deployment Script
 echo "🚀 MindGains AI - Deploying Edge Functions"
