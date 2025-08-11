@@ -38,6 +38,7 @@ import {
   Shield,
   Infinity
 } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
@@ -273,11 +274,11 @@ export default function SubscriptionScreen() {
 
   const getPlanIcon = (planName: string) => {
     switch (planName.toLowerCase()) {
-      case 'free': return <Users size={32} color={theme.colors.text.primary} />;
-      case 'premium monthly': return <Star size={32} color={theme.colors.text.primary} />;
-      case 'premium yearly': return <Trophy size={32} color={theme.colors.text.primary} />;
-      case 'lifetime': return <Crown size={32} color={theme.colors.text.primary} />;
-      default: return <Sparkles size={32} color={theme.colors.text.primary} />;
+      case 'free': return 'users';
+      case 'premium monthly': return 'star';
+      case 'premium yearly': return 'trophy';
+      case 'lifetime': return 'crown';
+      default: return 'magic';
     }
   };
 
@@ -338,7 +339,7 @@ export default function SubscriptionScreen() {
               colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
               style={styles.headerIcon}
             >
-              <Crown size={32} color={theme.colors.text.primary} />
+              <FontAwesome5 name="crown" size={28} color={theme.colors.text.primary} solid />
             </LinearGradient>
           </Animated.View>
           <Text style={styles.headerTitle}>Upgrade to Premium</Text>
@@ -361,7 +362,7 @@ export default function SubscriptionScreen() {
               ]}
               style={styles.usageCard}
             >
-              <View style={styles.usageHeader}>
+                  <FontAwesome5 name="check-circle" size={14} color={theme.colors.accent.green} solid />
                 <Clock size={20} color={theme.colors.accent.blue} />
                 <Text style={styles.usageTitle}>Today's Usage</Text>
               </View>
@@ -435,13 +436,13 @@ export default function SubscriptionScreen() {
             
             <View style={styles.revenueStats}>
               <View style={styles.revenueStat}>
-                <Text style={styles.revenueStatValue}>₹299</Text>
+                <FontAwesome5 name="trophy" size={20} color={theme.colors.accent.green} solid />
                 <Text style={styles.revenueStatLabel}>Monthly Premium</Text>
               </View>
               <View style={styles.revenueStat}>
                 <Text style={styles.revenueStatValue}>15.7%</Text>
                 <Text style={styles.revenueStatLabel}>Conversion Rate</Text>
-              </View>
+                <FontAwesome5 name="infinity" size={14} color={theme.colors.accent.blue} solid />
               <View style={styles.revenueStat}>
                 <Text style={styles.revenueStatValue}>₹47L</Text>
                 <Text style={styles.revenueStatLabel}>Monthly Revenue</Text>
@@ -463,13 +464,14 @@ export default function SubscriptionScreen() {
               size="large"
               fullWidth
               disabled={isPurchasing}
-              icon={<Crown size={20} color={theme.colors.text.primary} />}
+              icon={<FontAwesome5 name="crown" size={16} color={theme.colors.text.primary} solid />}
               colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
               style={styles.purchaseButton}
             />
             
             <Text style={styles.purchaseNote}>
-              💳 Secure payment via Razorpay • Cancel anytime • 7-day money-back guarantee
+              <FontAwesome5 name="shield-alt" size={12} color={theme.colors.accent.green} solid />
+              {' '}Secure payment via Razorpay • Cancel anytime • 7-day money-back guarantee
             </Text>
           </View>
         )}
@@ -581,7 +583,7 @@ function PlanCard({ plan, isSelected, onSelect, isPopular, isBestValue, icon, co
           {/* Plan Header */}
           <View style={styles.planHeader}>
             <View style={[styles.planIcon, { backgroundColor: colors[0] + '30' }]}>
-              {icon}
+              <FontAwesome5 name={icon} size={28} color={theme.colors.text.primary} solid />
             </View>
             <Text style={styles.planName}>{plan.name}</Text>
             <Text style={styles.planDescription}>{plan.description}</Text>
@@ -598,7 +600,7 @@ function PlanCard({ plan, isSelected, onSelect, isPopular, isBestValue, icon, co
                     Save ₹{((plan.price_monthly * 12 - plan.price_yearly) / 100).toLocaleString('en-IN')}
                   </Text>
                 )}
-              </>
+                  <FontAwesome5 name="check-circle" size={16} color={theme.colors.text.primary} solid />
             ) : (
               <Text style={styles.planPrice}>Free</Text>
             )}

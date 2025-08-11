@@ -19,6 +19,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { ChevronLeft, Trophy, Star, Clock, Target, CircleCheck as CheckCircle, X, Brain, Share2, Chrome as Home, TrendingUp, Award } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
@@ -235,7 +236,10 @@ Join India's #1 AI learning platform:
         </TouchableOpacity>
         
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>📅 Daily Quiz Results</Text>
+          <Text style={styles.headerTitle}>
+            <FontAwesome5 name="calendar-check" size={16} color={theme.colors.accent.purple} solid />
+            {' '}Daily Quiz Results
+          </Text>
           <Text style={styles.headerSubtitle}>{quizDate || 'Today'}</Text>
         </View>
         
@@ -248,7 +252,7 @@ Join India's #1 AI learning platform:
             colors={[theme.colors.background.card, theme.colors.background.secondary]}
             style={styles.shareButtonGradient}
           >
-            <Share2 size={20} color={theme.colors.accent.cyan} />
+            <FontAwesome5 name="share-alt" size={16} color={theme.colors.accent.cyan} solid />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -273,7 +277,7 @@ Join India's #1 AI learning platform:
             colors={[getScoreColor(results.score_percentage), getScoreColor(results.score_percentage) + '80']}
             style={styles.scoreBadge}
           >
-            <Trophy size={32} color={theme.colors.text.primary} />
+            <FontAwesome5 name="trophy" size={28} color={theme.colors.text.primary} solid />
             <Text style={styles.scoreValue}>{results.score_percentage}%</Text>
           </LinearGradient>
           
@@ -288,28 +292,28 @@ Join India's #1 AI learning platform:
           
           <View style={styles.statsGrid}>
             <StatCard
-              icon={<CheckCircle size={24} color={theme.colors.text.primary} />}
+              icon="check-circle"
               title="Correct"
               value={results.correct_answers.toString()}
               color={theme.colors.accent.green}
             />
             
             <StatCard
-              icon={<X size={24} color={theme.colors.text.primary} />}
+              icon="times-circle"
               title="Incorrect"
               value={(results.total_questions - results.correct_answers).toString()}
               color={theme.colors.accent.pink}
             />
             
             <StatCard
-              icon={<Clock size={24} color={theme.colors.text.primary} />}
+              icon="clock"
               title="Time"
               value={`${Math.round(results.time_spent / 60)}m`}
               color={theme.colors.accent.blue}
             />
             
             <StatCard
-              icon={<Star size={24} color={theme.colors.text.primary} />}
+              icon="star"
               title="Points"
               value={results.total_points.toString()}
               color={theme.colors.accent.yellow}
@@ -345,7 +349,7 @@ Join India's #1 AI learning platform:
               <View style={styles.recommendationsList}>
                 {recommendations.map((rec, index) => (
                   <View key={index} style={styles.recommendationItem}>
-                    <Brain size={16} color={theme.colors.accent.purple} />
+                    <FontAwesome5 name="lightbulb" size={14} color={theme.colors.accent.purple} solid />
                     <Text style={styles.recommendationText}>{rec}</Text>
                   </View>
                 ))}
@@ -372,7 +376,7 @@ Join India's #1 AI learning platform:
             onPress={() => router.replace('/(tabs)')}
             size="large"
             fullWidth
-            icon={<Home size={20} color={theme.colors.text.primary} />}
+            icon={<FontAwesome5 name="home" size={16} color={theme.colors.text.primary} solid />}
             colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
             style={styles.actionButton}
           />
@@ -385,7 +389,7 @@ Join India's #1 AI learning platform:
               colors={[theme.colors.background.card, theme.colors.background.secondary]}
               style={styles.shareButtonGradient}
             >
-              <Share2 size={20} color={theme.colors.accent.cyan} />
+              <FontAwesome5 name="share-alt" size={16} color={theme.colors.accent.cyan} solid />
               <Text style={styles.shareButtonText}>Share Results</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -399,22 +403,37 @@ Join India's #1 AI learning platform:
 }
 
 function StatCard({ icon, title, value, color }: {
-  icon: React.ReactNode;
+  icon: string;
   title: string;
   value: string;
   color: string;
 }) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 600 });
+    scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <LinearGradient
-      colors={[color + '20', color + '10']}
-      style={styles.statCard}
-    >
-      <View style={[styles.statIcon, { backgroundColor: color + '30' }]}>
-        {icon}
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-    </LinearGradient>
+    <Animated.View style={[styles.statCard, animatedStyle]}>
+      <LinearGradient
+        colors={[color + '20', color + '10']}
+        style={styles.statCardGradient}
+      >
+        <View style={[styles.statIcon, { backgroundColor: color + '30' }]}>
+          <FontAwesome5 name={icon} size={20} color={color} solid />
+        </View>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statTitle}>{title}</Text>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -711,10 +730,14 @@ const styles = StyleSheet.create({
   statCard: {
     width: '47%',
     borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  statCardGradient: {
     padding: theme.spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border.tertiary,
+    borderRadius: theme.borderRadius.lg,
   },
   statIcon: {
     width: 48,
@@ -943,15 +966,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginBottom: theme.spacing.sm,
-  },
-  shareButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border.primary,
   },
   shareButtonText: {
     fontSize: 16,

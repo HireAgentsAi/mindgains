@@ -20,7 +20,7 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { Brain, Sparkles, Zap, Target, BookOpen, Trophy, Crown, Star } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
 
@@ -60,7 +60,8 @@ function FloatingParticle({ index, delay }: { index: number; delay: number }) {
   }));
 
   const icons = [Brain, Sparkles, Zap, Target, BookOpen, Trophy, Crown, Star];
-  const IconComponent = icons[index % icons.length];
+  const iconNames = ['brain', 'star', 'bolt', 'bullseye', 'book', 'trophy', 'crown', 'star'];
+  const iconName = iconNames[index % iconNames.length];
   const colors = [
     theme.colors.accent.purple,
     theme.colors.accent.blue,
@@ -72,9 +73,11 @@ function FloatingParticle({ index, delay }: { index: number; delay: number }) {
 
   return (
     <Animated.View style={[styles.particle, animatedStyle]}>
-      <IconComponent 
-        size={16 + Math.random() * 8} 
+      <FontAwesome5 
+        name={iconName}
+        size={12 + Math.random() * 6} 
         color={colors[index % colors.length]} 
+        solid
       />
     </Animated.View>
   );
@@ -257,7 +260,7 @@ export default function SplashScreen() {
             ]}
             style={styles.logoBackground}
           >
-            <Brain size={80} color={theme.colors.text.primary} strokeWidth={2} />
+            <FontAwesome5 name="brain" size={70} color={theme.colors.text.primary} solid />
             
             {/* Enhanced shimmer overlay */}
             <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
@@ -283,7 +286,7 @@ export default function SplashScreen() {
                 colors={[theme.colors.accent.yellow, theme.colors.accent.yellow + '80']}
                 style={styles.orbitalGlow}
               >
-                <Crown size={20} color={theme.colors.text.primary} />
+                <FontAwesome5 name="crown" size={16} color={theme.colors.text.primary} solid />
               </LinearGradient>
             </Animated.View>
             
@@ -292,7 +295,7 @@ export default function SplashScreen() {
                 colors={[theme.colors.accent.green, theme.colors.accent.green + '80']}
                 style={styles.orbitalGlow}
               >
-                <Trophy size={18} color={theme.colors.text.primary} />
+                <FontAwesome5 name="trophy" size={14} color={theme.colors.text.primary} solid />
               </LinearGradient>
             </Animated.View>
             
@@ -301,7 +304,7 @@ export default function SplashScreen() {
                 colors={[theme.colors.accent.pink, theme.colors.accent.pink + '80']}
                 style={styles.orbitalGlow}
               >
-                <Star size={16} color={theme.colors.text.primary} />
+                <FontAwesome5 name="star" size={12} color={theme.colors.text.primary} solid />
               </LinearGradient>
             </Animated.View>
           </View>
@@ -333,7 +336,7 @@ export default function SplashScreen() {
                 ]}
                 style={styles.brandBadgeGradient}
               >
-                <Crown size={16} color={theme.colors.accent.yellow} />
+                <FontAwesome5 name="crown" size={14} color={theme.colors.accent.yellow} solid />
                 <Text style={styles.brandText}>#1 Educational AI in India</Text>
               </LinearGradient>
             </View>

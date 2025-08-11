@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, Lock, Eye, EyeOff, User, ArrowRight, ChevronLeft, CircleCheck as CheckCircle, Brain } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
 import { router } from 'expo-router';
@@ -293,7 +293,7 @@ export default function AuthScreen() {
               ]}
               style={styles.logoBackground}
             >
-              <Brain size={60} color={theme.colors.text.primary} strokeWidth={2} />
+              <FontAwesome5 name="brain" size={50} color={theme.colors.text.primary} solid />
               
               {/* Shimmer effect */}
               <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
@@ -337,7 +337,12 @@ export default function AuthScreen() {
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Full Name</Text>
                     <View style={getInputStyle('name')}>
-                      <User size={20} color={activeInput === 'name' ? theme.colors.accent.purple : theme.colors.text.tertiary} />
+                      <FontAwesome5 
+                        name="user" 
+                        size={16} 
+                        color={activeInput === 'name' ? theme.colors.accent.purple : theme.colors.text.tertiary} 
+                        solid 
+                      />
                       <TextInput 
                         style={styles.input} 
                         placeholder="Enter your full name" 
@@ -354,7 +359,12 @@ export default function AuthScreen() {
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Email Address</Text>
                   <View style={getInputStyle('email')}>
-                    <Mail size={20} color={activeInput === 'email' ? theme.colors.accent.purple : theme.colors.text.tertiary} />
+                    <FontAwesome5 
+                      name="envelope" 
+                      size={16} 
+                      color={activeInput === 'email' ? theme.colors.accent.purple : theme.colors.text.tertiary} 
+                      solid 
+                    />
                     <TextInput 
                       style={styles.input} 
                       placeholder="Enter your email" 
@@ -372,7 +382,12 @@ export default function AuthScreen() {
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Password</Text>
                   <View style={getInputStyle('password')}>
-                    <Lock size={20} color={activeInput === 'password' ? theme.colors.accent.purple : theme.colors.text.tertiary} />
+                    <FontAwesome5 
+                      name="lock" 
+                      size={16} 
+                      color={activeInput === 'password' ? theme.colors.accent.purple : theme.colors.text.tertiary} 
+                      solid 
+                    />
                     <TextInput 
                       style={styles.input} 
                       placeholder="Enter your password" 
@@ -384,10 +399,12 @@ export default function AuthScreen() {
                       onBlur={handleInputBlur}
                     />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                      {showPassword ? 
-                        <EyeOff size={20} color={theme.colors.text.tertiary} /> : 
-                        <Eye size={20} color={theme.colors.text.tertiary} />
-                      }
+                      <FontAwesome5 
+                        name={showPassword ? "eye-slash" : "eye"} 
+                        size={16} 
+                        color={theme.colors.text.tertiary} 
+                        solid 
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -396,7 +413,12 @@ export default function AuthScreen() {
                   <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Confirm Password</Text>
                     <View style={getInputStyle('confirmPassword')}>
-                      <Lock size={20} color={activeInput === 'confirmPassword' ? theme.colors.accent.purple : theme.colors.text.tertiary} />
+                      <FontAwesome5 
+                        name="lock" 
+                        size={16} 
+                        color={activeInput === 'confirmPassword' ? theme.colors.accent.purple : theme.colors.text.tertiary} 
+                        solid 
+                      />
                       <TextInput 
                         style={styles.input} 
                         placeholder="Confirm your password" 
@@ -430,7 +452,7 @@ export default function AuthScreen() {
                       <Text style={styles.buttonText}>
                         {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
                       </Text>
-                      <ArrowRight size={20} color={theme.colors.text.primary} />
+                      <FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />
                     </LinearGradient>
                   </TouchableOpacity>
                 </Animated.View>
@@ -453,11 +475,11 @@ export default function AuthScreen() {
           {/* Trust badges */}
           <View style={styles.trustBadges}>
             <View style={styles.trustBadge}>
-              <CheckCircle size={14} color={theme.colors.accent.green} />
+              <FontAwesome5 name="check-circle" size={12} color={theme.colors.accent.green} solid />
               <Text style={styles.trustText}>Trusted by 1M+ students</Text>
             </View>
             <View style={styles.trustBadge}>
-              <CheckCircle size={14} color={theme.colors.accent.green} />
+              <FontAwesome5 name="check-circle" size={12} color={theme.colors.accent.green} solid />
               <Text style={styles.trustText}>UPSC • JEE • NEET • Banking</Text>
             </View>
           </View>
@@ -487,7 +509,7 @@ export default function AuthScreen() {
                   colors={[theme.colors.accent.green, theme.colors.accent.blue]}
                   style={styles.modalIcon}
                 >
-                  <CheckCircle size={32} color={theme.colors.text.primary} />
+                  <FontAwesome5 name="check-circle" size={28} color={theme.colors.text.primary} solid />
                 </LinearGradient>
               </View>
               
