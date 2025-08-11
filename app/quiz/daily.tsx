@@ -108,16 +108,6 @@ export default function DailyQuizScreen() {
       
       // Check authentication first
       // Always ensure today's quiz exists
-          'Daily Limit Reached',
-          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
-          [
-            { text: 'Maybe Later', onPress: () => router.back() },
-            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
-          ]
-        );
-        return;
-      }
-
       // Get today's quiz using AI
       const dailyQuiz = await SupabaseService.ensureTodayQuiz();
       
