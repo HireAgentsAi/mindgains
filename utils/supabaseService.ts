@@ -390,9 +390,9 @@ export class SupabaseService {
 
   static async generateDailyQuiz(): Promise<DailyQuiz | null> {
     try {
-      console.log('Calling daily-quiz-generator edge function...');
+      console.log('Calling generate-daily-quiz edge function...');
       
-      const { data, error } = await supabase.functions.invoke('daily-quiz-generator');
+      const { data, error } = await supabase.functions.invoke('generate-daily-quiz');
       
       if (error) {
         console.error('Edge function error:', error);
