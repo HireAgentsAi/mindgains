@@ -30,7 +30,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 
-const { width, height } = Dimensions.get('window');
+const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);

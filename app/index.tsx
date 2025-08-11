@@ -24,7 +24,7 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
 
-const { width, height } = Dimensions.get('window');
+const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 // Premium floating particles component
 function FloatingParticle({ index, delay }: { index: number; delay: number }) {

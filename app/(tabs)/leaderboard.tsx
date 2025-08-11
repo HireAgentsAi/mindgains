@@ -25,7 +25,7 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
 
-const { width } = Dimensions.get('window');
+const { width = 375 } = Dimensions.get('window') || {};
 
 interface LeaderboardUser {
   id: string;

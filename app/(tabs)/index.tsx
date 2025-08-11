@@ -29,7 +29,7 @@ import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
 import { demoUserStats } from '@/utils/demoData';
 
-const { width } = Dimensions.get('window');
+const { width = 375 } = Dimensions.get('window') || {};
 
 interface UserStats {
   currentLevel: number;

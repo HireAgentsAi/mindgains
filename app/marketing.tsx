@@ -28,7 +28,7 @@ import { MarketingService, type MarketingMetrics } from '@/utils/marketingServic
 import { AnalyticsService } from '@/utils/analyticsService';
 import { demoMarketingData } from '@/utils/demoData';
 
-const { width, height } = Dimensions.get('window');
+const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 export default function MarketingScreen() {
   const [metrics, setMetrics] = useState<MarketingMetrics | null>(null);

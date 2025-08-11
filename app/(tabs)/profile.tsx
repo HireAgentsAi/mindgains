@@ -30,6 +30,8 @@ import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
 import { demoUserProfile, demoUserStats, demoUserAchievements, demoAchievements } from '@/utils/demoData';
 
+const { width = 375 } = Dimensions.get('window') || {};
+
 interface Achievement {
   id: string;
   name: string;

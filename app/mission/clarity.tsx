@@ -28,7 +28,7 @@ import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
 
-const { width } = Dimensions.get('window');
+const { width = 375 } = Dimensions.get('window') || {};
 
 interface AdaptiveLearningContent {
   overview: string;

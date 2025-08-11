@@ -30,7 +30,7 @@ import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import { SupabaseService } from '@/utils/supabaseService';
 
-const { width, height } = Dimensions.get('window');
+const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 interface OnboardingStep {
   id: number;
