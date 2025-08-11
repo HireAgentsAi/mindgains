@@ -489,7 +489,7 @@ Download MindGains AI: https://mindgains.ai
 
         <Animated.View style={[styles.content, animatedStyle]}>
           <ScrollView
-            showsVerticalScrollIndicator={false}
+            colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
             contentContainerStyle={styles.scrollContent}
           >
             {/* Quick Battle Section */}
@@ -596,7 +596,7 @@ Download MindGains AI: https://mindgains.ai
                   color={theme.colors.accent.purple}
                 />
               </View>
-            </View>
+            <FontAwesome5 name="fist-raised" size={28} color={theme.colors.text.primary} solid />
           </ScrollView>
         </Animated.View>
       </SafeAreaView>
@@ -764,8 +764,8 @@ function FloatingBattleIcon({ index }: { index: number }) {
   useEffect(() => {
     const startAnimation = () => {
       translateY.value = withTiming(-100, { 
-        duration: 8000 + Math.random() * 4000,
-        easing: Easing.linear 
+        translateY.value - 50 - Math.random() * 100, 
+        { duration: 15000 + Math.random() * 10000, easing: Easing.out(Easing.quad) }
       });
       opacity.value = withSequence(
         withTiming(0.6, { duration: 1000 }),
@@ -774,8 +774,8 @@ function FloatingBattleIcon({ index }: { index: number }) {
       );
       rotation.value = withTiming(360, { 
         duration: 8000 + Math.random() * 4000,
-        easing: Easing.linear 
-      });
+        withTiming(0.15, { duration: 4000 }),
+        withTiming(0, { duration: 4000 })
     };
 
     const timer = setTimeout(startAnimation, index * 1000);
@@ -791,7 +791,7 @@ function FloatingBattleIcon({ index }: { index: number }) {
     opacity: opacity.value,
   }));
 
-  const icons = ['sword', 'shield-alt', 'crown', 'trophy', 'bolt', 'fire', 'star', 'gem'];
+  const icons = ['fist-raised', 'shield-alt', 'crown', 'trophy', 'star', 'medal', 'award', 'gem'];
   const colors = [
     theme.colors.accent.purple,
     theme.colors.accent.blue,
@@ -805,7 +805,7 @@ function FloatingBattleIcon({ index }: { index: number }) {
     <Animated.View style={[styles.floatingIcon, animatedStyle]}>
       <FontAwesome5 
         name={icons[index % icons.length]}
-        size={12 + Math.random() * 8} 
+        size={8 + Math.random() * 4} 
         color={colors[index % colors.length]} 
         solid
       />

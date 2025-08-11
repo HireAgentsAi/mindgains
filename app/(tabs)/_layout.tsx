@@ -65,7 +65,7 @@ export default function TabLayout() {
           title: 'Battle',
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
-              name="sword"
+              name="fist-raised"
               size={focused ? 28 : 24}
               color={color}
               solid={focused}
