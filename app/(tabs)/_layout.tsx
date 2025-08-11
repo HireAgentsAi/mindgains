@@ -60,6 +60,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="battle"
+        options={{
+          title: 'Battle',
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesome5
+              name="sword"
+              size={focused ? 28 : 24}
+              color={color}
+              solid={focused}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="leaderboard"
         options={{
           title: 'Leaderboard',
