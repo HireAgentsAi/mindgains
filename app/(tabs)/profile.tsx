@@ -565,24 +565,6 @@ Join India's #1 AI learning platform:
                   isDestructive
                 />
               </View>
-
-              {/* Sign Out Button */}
-              <TouchableOpacity
-                style={styles.signOutButton}
-                onPress={handleSignOut}
-                disabled={isSigningOut}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[theme.colors.accent.red + '20', theme.colors.accent.pink + '20']}
-                  style={styles.signOutGradient}
-                >
-                  <LogOut size={20} color={theme.colors.accent.red} />
-                  <Text style={styles.signOutText}>
-                    {isSigningOut ? 'Signing out...' : 'Sign Out'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
         </ScrollView>
       </View>
@@ -1216,7 +1198,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
   signOutButton: {
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
   },
@@ -1232,7 +1214,8 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 16,
-    fontFamily: theme.fonts.subheading,
+    fontFamily: theme.fonts.body,
     color: theme.colors.accent.red,
+    fontWeight: '600',
   },
 });
