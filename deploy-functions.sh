@@ -6,9 +6,11 @@ echo "=========================================="
 
 # Load environment variables
 if [ -f .env ]; then
-    set -a
-    . .env
-    set +a
+    while IFS='=' read -r key value; do
+        if [ -n "$key" ] && [ "${key#\#}" = "$key" ]; then
+            export "$key"="$value"
+        fi
+    done < .env
     echo "✅ Environment variables loaded from .env"
 else
     echo "❌ .env file not found!"
