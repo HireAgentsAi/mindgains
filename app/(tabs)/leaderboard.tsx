@@ -339,7 +339,7 @@ export default function Leaderboard() {
               <Text style={styles.listTitle}>All Rankings</Text>
               <View style={styles.totalUsers}>
                 <FontAwesome5 name="users" size={14} color={theme.colors.text.tertiary} />
-                <Text style={styles.totalUsersText}>{leaderboardData.length}+ students</Text>
+                <Text style={styles.totalUsersText}><Text>{leaderboardData.length}</Text><Text>+ students</Text></Text>
               </View>
             </View>
             

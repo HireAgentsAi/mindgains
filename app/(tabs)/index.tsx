@@ -436,7 +436,7 @@ export default function Home() {
             <View style={styles.statsSection}>
               <Text style={styles.sectionTitle}>
                 <FontAwesome5 name="chart-pie" size={18} color={theme.colors.accent.blue} solid />
-                {' '}Your Progress
+                <Text> Your Progress</Text>
               </Text>
               
               <View style={styles.statsGrid}>
@@ -475,7 +475,7 @@ export default function Home() {
             <Animated.View style={[styles.actionsSection, actionsAnimatedStyle]}>
               <Text style={styles.sectionTitle}>
                 <FontAwesome5 name="rocket" size={18} color={theme.colors.accent.purple} solid />
-                {' '}Start Learning
+                <Text> Start Learning</Text>
               </Text>
               
               <View style={styles.actionsContainer}>
