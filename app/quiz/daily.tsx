@@ -248,41 +248,51 @@ export default function DailyQuizScreen() {
       ).length;
       const percentage = Math.round((correctCount / quiz.questions.length) * 100);
       
-      const quizResults = {
-        daily_quiz_id: quiz.id,
-        quiz_date: quiz.date,
-        answers: userAnswers,
-        correct_answers: correctCount,
-        total_questions: quiz.questions.length,
-        score_percentage: percentage,
-        total_points: quiz.total_points,
-        time_spent: timeSpent,
-        detailed_results: quiz.questions.map((q, index) => ({
-          question_id: q.id,
-          question: q.question,
-          options: q.options,
-          user_answer: userAnswers[index],
-          correct_answer: q.correct_answer,
-          is_correct: userAnswers[index] === q.correct_answer,
-          explanation: q.explanation,
-          subject: q.subject,
-          subtopic: q.subtopic,
-          difficulty: q.difficulty,
-          points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
-        })),
-      };
+      console.log('📊 Calculating results...', {
+        correctCount,
+        totalQuestions: quiz.questions.length,
+        percentage,
+        timeSpent
+      });
+      
+      // Submit quiz results with comprehensive error handling
+      const submitResult = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
+      
+      console.log('📤 Submit result:', submitResult);
       
       if (!isMounted.current) return;
       
-      // Submit quiz results
-      const submitResult = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
-      
-      if (submitResult.success) {
-        console.log('✅ Quiz submitted successfully');
-        setResults(submitResult.results || quizResults);
+      if (submitResult.success && submitResult.results) {
+        console.log('✅ Quiz submitted successfully with results');
+        setResults(submitResult.results);
       } else {
-        console.log('⚠️ Quiz submission failed, using local results');
-        setResults(quizResults);
+        console.log('⚠️ Quiz submission failed, creating local results');
+        // Create comprehensive local results as fallback
+        const localResults = {
+          correct_answers: correctCount,
+          total_questions: quiz.questions.length,
+          score_percentage: percentage,
+          total_points: Math.round(percentage * 2), // Approximate points
+          time_spent: timeSpent,
+          xp_earned: Math.round(percentage * 1.5), // Approximate XP
+          detailed_results: quiz.questions.map((q, index) => ({
+            question_id: q.id,
+            question: q.question,
+            options: q.options,
+            user_answer: userAnswers[index],
+            correct_answer: q.correct_answer,
+            is_correct: userAnswers[index] === q.correct_answer,
+            explanation: q.explanation,
+            subject: q.subject,
+            subtopic: q.subtopic,
+            difficulty: q.difficulty,
+            points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
+          })),
+          grok_message: getGrokMessage(percentage, correctCount, quiz.questions.length),
+          mascot_celebration: getMascotCelebration(percentage)
+        };
+        
+        setResults(localResults);
       }
       
       setIsCompleted(true);
@@ -294,13 +304,30 @@ export default function DailyQuizScreen() {
       const correctCount = userAnswers.filter((answer, index) => 
         answer === quiz!.questions[index].correct_answer
       ).length;
+      const percentage = Math.round((correctCount / quiz!.questions.length) * 100);
       
       const fallbackResults = {
         correct_answers: correctCount,
         total_questions: quiz!.questions.length,
-        score_percentage: Math.round((correctCount / quiz!.questions.length) * 100),
+        score_percentage: percentage,
         time_spent: timeSpent,
-        total_points: quiz!.total_points,
+        total_points: Math.round(percentage * 2),
+        xp_earned: Math.round(percentage * 1.5),
+        grok_message: getGrokMessage(percentage, correctCount, quiz!.questions.length),
+        mascot_celebration: getMascotCelebration(percentage),
+        detailed_results: quiz!.questions.map((q, index) => ({
+          question_id: q.id,
+          question: q.question,
+          options: q.options,
+          user_answer: userAnswers[index],
+          correct_answer: q.correct_answer,
+          is_correct: userAnswers[index] === q.correct_answer,
+          explanation: q.explanation,
+          subject: q.subject,
+          subtopic: q.subtopic,
+          difficulty: q.difficulty,
+          points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
+        }))
       };
       
       setResults(fallbackResults);
