@@ -652,8 +652,8 @@ export default function DailyQuizScreen() {
         ) : (
           <GradientButton
             title={
-            icon={<FontAwesome5 name="brain" size={16} color={theme.colors.text.primary} solid />}
-                ? "Submitting..." 
+              isSubmitting
+                ? "Submitting..."
                 : currentQuestionIndex < quiz.questions.length - 1 
                   ? "Next Question" 
                   : "Complete Quiz"
