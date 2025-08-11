@@ -362,7 +362,7 @@ export default function SubscriptionScreen() {
               ]}
               style={styles.usageCard}
             >
-                  <FontAwesome5 name="check-circle" size={14} color={theme.colors.accent.green} solid />
+              <View style={styles.usageHeader}>
                 <Clock size={20} color={theme.colors.accent.blue} />
                 <Text style={styles.usageTitle}>Today's Usage</Text>
               </View>
@@ -437,13 +437,15 @@ export default function SubscriptionScreen() {
             <View style={styles.revenueStats}>
               <View style={styles.revenueStat}>
                 <FontAwesome5 name="trophy" size={20} color={theme.colors.accent.green} solid />
+                <Text style={styles.revenueStatValue}>1M+</Text>
                 <Text style={styles.revenueStatLabel}>Monthly Premium</Text>
               </View>
               <View style={styles.revenueStat}>
                 <Text style={styles.revenueStatValue}>15.7%</Text>
                 <Text style={styles.revenueStatLabel}>Conversion Rate</Text>
-                <FontAwesome5 name="infinity" size={14} color={theme.colors.accent.blue} solid />
+              </View>
               <View style={styles.revenueStat}>
+                <FontAwesome5 name="infinity" size={14} color={theme.colors.accent.blue} solid />
                 <Text style={styles.revenueStatValue}>₹47L</Text>
                 <Text style={styles.revenueStatLabel}>Monthly Revenue</Text>
               </View>
@@ -600,7 +602,7 @@ function PlanCard({ plan, isSelected, onSelect, isPopular, isBestValue, icon, co
                     Save ₹{((plan.price_monthly * 12 - plan.price_yearly) / 100).toLocaleString('en-IN')}
                   </Text>
                 )}
-                  <FontAwesome5 name="check-circle" size={16} color={theme.colors.text.primary} solid />
+              </>
             ) : (
               <Text style={styles.planPrice}>Free</Text>
             )}
