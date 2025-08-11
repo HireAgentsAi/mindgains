@@ -6,7 +6,9 @@ echo "=========================================="
 
 # Load environment variables
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    set -a
+    . .env
+    set +a
     echo "✅ Environment variables loaded from .env"
 else
     echo "❌ .env file not found!"
