@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": []
+  }
+}
