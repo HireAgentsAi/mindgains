@@ -52,10 +52,10 @@ echo "🚀 Deploying Edge Functions..."
 echo "--------------------------------"
 
 echo "📤 Deploying daily-quiz-generator..."
-npx supabase functions deploy daily-quiz-generator --no-verify-jwt
+npx supabase functions deploy daily-quiz-generator
 
-echo "📤 Deploying generate-topic-quiz..."
-npx supabase functions deploy generate-topic-quiz --no-verify-jwt
+echo "📤 Deploying topic-quiz-generator..."
+npx supabase functions deploy topic-quiz-generator
 
 # Set environment secrets for edge functions
 echo ""
@@ -63,24 +63,16 @@ echo "🔑 Setting up environment secrets..."
 echo "-----------------------------------"
 
 echo "🔐 Setting OpenAI API key..."
-echo $OPENAI_API_KEY | npx supabase secrets set OPENAI_API_KEY
+echo $OPENAI_API_KEY | npx supabase secrets set OPENAI_API_KEY --project-ref $PROJECT_ID
+
+echo "🔐 Setting Claude API key..."
+echo $CLAUDE_API_KEY | npx supabase secrets set CLAUDE_API_KEY --project-ref $PROJECT_ID
 
 echo "🔐 Setting Supabase URL..."
-echo $EXPO_PUBLIC_SUPABASE_URL | npx supabase secrets set SUPABASE_URL
+echo $EXPO_PUBLIC_SUPABASE_URL | npx supabase secrets set SUPABASE_URL --project-ref $PROJECT_ID
 
 echo "🔐 Setting Supabase Service Role Key..."
-echo $EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY | npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY
-
-# Optional: Set additional API keys if available
-if [ ! -z "$CLAUDE_API_KEY" ]; then
-    echo "🔐 Setting Claude API key..."
-    echo $CLAUDE_API_KEY | npx supabase secrets set CLAUDE_API_KEY
-fi
-
-if [ ! -z "$GROK_API_KEY" ]; then
-    echo "🔐 Setting Grok API key..."
-    echo $GROK_API_KEY | npx supabase secrets set GROK_API_KEY
-fi
+echo $EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY | npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY --project-ref $PROJECT_ID
 
 # Deploy other essential functions
 echo ""

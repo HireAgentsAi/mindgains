@@ -106,22 +106,46 @@ export default function DailyQuizScreen() {
     try {
       if (!isMounted.current) return;
       
+      console.log('📱 Loading daily quiz...');
+      
       // Check authentication first
-      // Always ensure today's quiz exists
-      // Get today's quiz using AI
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
+
+      // Check user limits
+      const limits = await SupabaseService.checkUserLimits(user.id);
+      if (!limits.canTakeQuiz) {
+        if (!isMounted.current) return;
+        Alert.alert(
+          'Daily Limit Reached',
+          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
+          [
+            { text: 'Maybe Later', onPress: () => router.back() },
+            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
+          ]
+        );
+        return;
+      }
+
+      // Get today's quiz (will generate if doesn't exist)
       const dailyQuiz = await SupabaseService.ensureTodayQuiz();
       
       if (!dailyQuiz) {
-        throw new Error('Unable to load daily quiz');
+        throw new Error('Failed to load or generate daily quiz');
       }
       
       if (!isMounted.current) return;
+      console.log('✅ Daily quiz loaded:', dailyQuiz.questions.length, 'questions');
       setQuiz(dailyQuiz);
       setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
     } catch (error) {
-      console.error('Error loading daily quiz:', error);
+      console.error('❌ Error loading daily quiz:', error);
       if (!isMounted.current) return;
-      Alert.alert('Error', 'Unable to load daily quiz. Please try again later.');
+      Alert.alert('Error', 'Failed to load daily quiz. Please check your internet connection and try again.');
       router.back();
     } finally {
       if (!isMounted.current) return;
@@ -175,39 +199,79 @@ export default function DailyQuizScreen() {
     setIsSubmitting(true);
     
     try {
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // Demo submission
-        const correctCount = userAnswers.filter((answer, index) => 
-          answer === quiz.questions[index].correct_answer
-        ).length;
-        
-        const demoResults = {
-          correct_answers: correctCount,
-          total_questions: quiz.questions.length,
-          score_percentage: Math.round((correctCount / quiz.questions.length) * 100),
-          time_spent: timeSpent,
-          total_points: quiz.total_points,
-          questions: quiz.questions.map((q, index) => ({
-            question: q.question,
-            user_answer: userAnswers[index],
-            correct_answer: q.correct_answer,
-            is_correct: userAnswers[index] === q.correct_answer,
-            explanation: q.explanation,
-          })),
-        };
-        
-        setResults(demoResults);
-        setIsCompleted(true);
-      } else {
-        // Real submission
-        const result = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
-        setResults(result);
-        setIsCompleted(true);
+      console.log('📤 Submitting daily quiz...');
+      
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
       }
+
+      const correctCount = userAnswers.filter((answer, index) => 
+        answer === quiz.questions[index].correct_answer
+      ).length;
+      const percentage = Math.round((correctCount / quiz.questions.length) * 100);
+      
+      const quizResults = {
+        daily_quiz_id: quiz.id,
+        quiz_date: quiz.date,
+        answers: userAnswers,
+        correct_answers: correctCount,
+        total_questions: quiz.questions.length,
+        score_percentage: percentage,
+        total_points: quiz.total_points,
+        time_spent: timeSpent,
+        detailed_results: quiz.questions.map((q, index) => ({
+          question_id: q.id,
+          question: q.question,
+          options: q.options,
+          user_answer: userAnswers[index],
+          correct_answer: q.correct_answer,
+          is_correct: userAnswers[index] === q.correct_answer,
+          explanation: q.explanation,
+          subject: q.subject,
+          subtopic: q.subtopic,
+          difficulty: q.difficulty,
+          points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
+        })),
+      };
+      
+      if (!isMounted.current) return;
+      
+      // Submit quiz results
+      const submitResult = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
+      
+      if (submitResult.success) {
+        console.log('✅ Quiz submitted successfully');
+        setResults(submitResult.results || quizResults);
+      } else {
+        console.log('⚠️ Quiz submission failed, using local results');
+        setResults(quizResults);
+      }
+      
+      setIsCompleted(true);
     } catch (error) {
-      console.error('Error submitting quiz:', error);
-      Alert.alert('Error', 'Failed to submit quiz. Please try again.');
+      console.error('❌ Error submitting quiz:', error);
+      
+      // Create local results as fallback
+      if (!isMounted.current) return;
+      const correctCount = userAnswers.filter((answer, index) => 
+        answer === quiz!.questions[index].correct_answer
+      ).length;
+      
+      const fallbackResults = {
+        correct_answers: correctCount,
+        total_questions: quiz!.questions.length,
+        score_percentage: Math.round((correctCount / quiz!.questions.length) * 100),
+        time_spent: timeSpent,
+        total_points: quiz!.total_points,
+      };
+      
+      setResults(fallbackResults);
+      setIsCompleted(true);
+      
+      Alert.alert('Warning', 'Quiz completed but results may not be saved. Please check your connection.');
     } finally {
       if (!isMounted.current) return;
       setIsSubmitting(false);
@@ -269,7 +333,7 @@ export default function DailyQuizScreen() {
         <View style={styles.loadingContainer}>
           <MascotAvatar size={100} animated={true} glowing={true} mood="focused" />
           <Text style={styles.loadingText}>Loading today's quiz...</Text>
-          <Text style={styles.loadingSubtext}>Preparing 10 questions from Indian subjects</Text>
+          <Text style={styles.loadingSubtext}>AI-powered questions on History, Polity, Geography, Economy, Science & Current Affairs</Text>
         </View>
       </LinearGradient>
     );
