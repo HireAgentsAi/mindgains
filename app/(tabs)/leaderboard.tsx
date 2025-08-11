@@ -532,7 +532,7 @@ function PodiumUser({ user, height, isWinner, podiumColor, league, index }: {
           style={styles.podiumAvatar}
         >
           <Text style={styles.podiumAvatarText}>
-            {user.full_name.charAt(0)}
+            {(user.full_name || '').charAt(0)}
           </Text>
           
           {/* Status indicator */}
@@ -642,7 +642,7 @@ function LeaderboardListItem({ user, league, index }: {
               colors={[league.color, league.color + '80']}
               style={styles.listAvatar}
             >
-              <Text style={styles.listAvatarText}>{(user.full_name || '').charAt(0)}</Text>
+              <Text style={styles.listAvatarText}>{(user.full_name || 'U').charAt(0)}</Text>
               
               {/* Status indicator */}
               <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(user.status) }]}>
