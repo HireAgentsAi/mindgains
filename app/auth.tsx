@@ -305,7 +305,6 @@ export default function AuthScreen() {
               style={styles.logoBackground}
             >
               <FontAwesome5 name="brain" size={50} color={theme.colors.text.primary} solid />
-              
               {/* Shimmer effect */}
               <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
                 <LinearGradient
@@ -316,7 +315,6 @@ export default function AuthScreen() {
                 />
               </Animated.View>
             </LinearGradient>
-            
             <Text style={styles.logoText}>MindGains AI</Text>
             <Text style={styles.logoTagline}>India's #1 AI Learning Platform</Text>
           </Animated.View>
