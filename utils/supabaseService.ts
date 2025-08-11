@@ -390,19 +390,27 @@ export class SupabaseService {
 
   static async generateDailyQuiz(): Promise<DailyQuiz | null> {
     try {
-      console.log('Calling daily-quiz-generator edge function...')
-      const { data, error } = await supabase.functions.invoke('daily-quiz-generator')
+      console.log('Calling daily-quiz-generator edge function...');
+      
+      // Add timeout and better error handling
+      const { data, error } = await Promise.race([
+        supabase.functions.invoke('daily-quiz-generator'),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Edge function timeout')), 10000)
+        )
+      ]) as any;
       
       if (error) {
-        console.error('Edge function error:', error)
-        throw error
+        console.error('Edge function error:', error);
+        throw error;
       }
       
-      console.log('Daily quiz generation response:', data)
-      return data.quiz
+      console.log('Daily quiz generation response:', data);
+      return data.quiz;
     } catch (error) {
-      console.error('Error generating daily quiz:', error)
-      return null
+      console.error('Error generating daily quiz:', error);
+      // Return null to trigger fallback in ensureTodayQuiz
+      return null;
     }
   }
 
@@ -431,7 +439,7 @@ export class SupabaseService {
     try {
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        console.log('Using demo quiz - Supabase not configured')
+        console.log('Using demo quiz - Supabase not configured');
         // Return demo quiz for development
         return {
           id: 'demo-daily-quiz',
@@ -556,21 +564,92 @@ export class SupabaseService {
         };
       }
       
-      // First try to get existing quiz
-      console.log('Checking for existing daily quiz...')
-      let quiz = await this.getTodayQuiz()
+      try {
+        // First try to get existing quiz
+        console.log('Checking for existing daily quiz...');
+        let quiz = await this.getTodayQuiz();
       
-      if (!quiz) {
-        console.log('No existing quiz found, generating new one...')
-        // Generate new quiz using edge function
-        quiz = await this.generateDailyQuiz()
+        if (!quiz) {
+          console.log('No existing quiz found, generating new one...');
+          // Generate new quiz using edge function
+          quiz = await this.generateDailyQuiz();
+        }
+      
+        console.log('Final quiz result:', quiz ? 'Success' : 'Failed');
+        return quiz;
+      } catch (supabaseError) {
+        console.log('Supabase error, falling back to demo quiz:', supabaseError);
+        // Return demo quiz if Supabase fails
+        return {
+          id: 'demo-daily-quiz-fallback',
+          date: new Date().toISOString().split('T')[0],
+          questions: [
+            {
+              id: 'dq1',
+              question: 'Which Article of the Indian Constitution guarantees Right to Equality?',
+              options: ['Article 12', 'Article 14', 'Article 16', 'Article 19'],
+              correct_answer: 1,
+              explanation: 'Article 14 guarantees equality before law and equal protection of laws to all persons within the territory of India.',
+              subject: 'Polity',
+              subtopic: 'Fundamental Rights',
+              difficulty: 'medium',
+              points: 10,
+            },
+            {
+              id: 'dq2',
+              question: 'Who was the first Governor-General of independent India?',
+              options: ['Lord Mountbatten', 'C. Rajagopalachari', 'Warren Hastings', 'Lord Curzon'],
+              correct_answer: 0,
+              explanation: 'Lord Mountbatten was the first Governor-General of independent India from August 1947 to June 1948.',
+              subject: 'History',
+              subtopic: 'Modern India',
+              difficulty: 'easy',
+              points: 5,
+            },
+            {
+              id: 'dq3',
+              question: 'Which river is known as the "Sorrow of Bengal"?',
+              options: ['Ganga', 'Brahmaputra', 'Damodar', 'Hooghly'],
+              correct_answer: 2,
+              explanation: 'The Damodar River was known as the "Sorrow of Bengal" due to its frequent floods before the construction of dams.',
+              subject: 'Geography',
+              subtopic: 'Physical Geography',
+              difficulty: 'medium',
+              points: 10,
+            },
+          ],
+          total_points: 25,
+          difficulty_distribution: { easy: 1, medium: 2, hard: 0 },
+          subjects_covered: ['History', 'Polity', 'Geography'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        };
       }
-      
-      console.log('Final quiz result:', quiz ? 'Success' : 'Failed')
-      return quiz
     } catch (error) {
-      console.error('Error ensuring today quiz:', error)
-      return null
+      console.error('Error ensuring today quiz:', error);
+      // Always return demo quiz as final fallback
+      return {
+        id: 'demo-daily-quiz-error-fallback',
+        date: new Date().toISOString().split('T')[0],
+        questions: [
+          {
+            id: 'dq1',
+            question: 'Which Article of the Indian Constitution guarantees Right to Equality?',
+            options: ['Article 12', 'Article 14', 'Article 16', 'Article 19'],
+            correct_answer: 1,
+            explanation: 'Article 14 guarantees equality before law and equal protection of laws to all persons within the territory of India.',
+            subject: 'Polity',
+            subtopic: 'Fundamental Rights',
+            difficulty: 'medium',
+            points: 10,
+          },
+        ],
+        total_points: 10,
+        difficulty_distribution: { easy: 0, medium: 1, hard: 0 },
+        subjects_covered: ['Polity'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
     }
   }
 

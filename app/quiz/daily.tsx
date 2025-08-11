@@ -105,11 +105,14 @@ export default function DailyQuizScreen() {
   const loadDailyQuiz = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // Use demo quiz
+      
+      // Always try to get quiz, with fallback handling
+      const dailyQuiz = await SupabaseService.ensureTodayQuiz();
+      
+      if (!dailyQuiz) {
+        // Final fallback if everything fails
         const demoQuiz: DailyQuiz = {
-          id: 'demo-daily-quiz',
+          id: 'demo-daily-quiz-final',
           date: new Date().toISOString().split('T')[0],
           questions: [
             {
@@ -145,87 +148,10 @@ export default function DailyQuizScreen() {
               difficulty: 'medium',
               points: 10,
             },
-          ],
+    
           total_points: 25,
           difficulty_distribution: { easy: 1, medium: 2, hard: 0 },
-          subjects_covered: ['Polity', 'History', 'Geography'],
-          is_active: true,
-          created_at: new Date().toISOString(),
-        };
-        
-        if (!isMounted.current) return;
-        setQuiz(demoQuiz);
-        setUserAnswers(new Array(demoQuiz.questions.length).fill(-1));
-        setIsLoading(false);
-        return;
-      }
-      
-      const user = await SupabaseService.getCurrentUser();
-      if (!user) {
-        if (!isMounted.current) return;
-        router.replace('/auth');
-        return;
-      }
-
-      // Ensure today's quiz exists
-      const dailyQuiz = await SupabaseService.ensureTodayQuiz();
-      if (!dailyQuiz) {
-        throw new Error('Unable to load daily quiz');
-      }
-
-      // Check if user already attempted
-      const attempt = await SupabaseService.getDailyQuizAttempt(user.id);
-      if (attempt) {
-        // User already attempted, show results
-        if (!isMounted.current) return;
-        router.replace({
-          pathname: '/quiz/daily-results',
-          params: { attemptId: attempt.id }
-        });
-        return;
-      }
-
-      if (!isMounted.current) return;
-      setQuiz(dailyQuiz);
-      setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
-    } catch (error) {
-      console.error('Error loading daily quiz:', error);
-      Alert.alert('Error', 'Failed to load today\'s quiz. Please try again.');
-      if (!isMounted.current) return;
-      router.back();
-    } finally {
-      if (!isMounted.current) return;
-      setIsLoading(false);
-    }
-  };
-
-  const handleAnswerSelect = (answerIndex: number) => {
-    if (showExplanation) return;
-    
-    setSelectedAnswer(answerIndex);
-    
-    // Update user answers array
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQuestionIndex] = answerIndex;
-    setUserAnswers(newAnswers);
-    
-    optionScale.value = withSequence(
-      withTiming(1.05, { duration: 100 }),
-      withTiming(1, { duration: 100 })
-    );
-  };
-
-  const handleSubmitAnswer = () => {
-    if (selectedAnswer === null) return;
-
-    const currentQuestion = quiz!.questions[currentQuestionIndex];
-    const isCorrect = selectedAnswer === currentQuestion.correct_answer;
-    
-    setShowExplanation(true);
-    
-    // Mascot reaction
-    mascotScale.value = withSequence(
-      withTiming(isCorrect ? 1.3 : 0.9, { duration: 200 }),
+          subjects_covered: ['History', 'Polity', 'Geography'],
       withTiming(1, { duration: 200 })
     );
   };
@@ -257,42 +183,11 @@ export default function DailyQuizScreen() {
           correct_answers: correctCount,
           total_questions: quiz.questions.length,
           score_percentage: Math.round((correctCount / quiz.questions.length) * 100),
-          total_points: correctCount * 10,
-          time_spent: timeSpent,
-          detailed_results: quiz.questions.map((q, index) => ({
-            question: q.question,
-            user_answer: userAnswers[index],
-            correct_answer: q.correct_answer,
             is_correct: userAnswers[index] === q.correct_answer,
             explanation: q.explanation,
-            subject: q.subject
-          }))
-        };
-        
-        if (!isMounted.current) return;
-        setResults(demoResults);
-        setIsCompleted(true);
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const result = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
-      
-      if (result.success) {
-        if (!isMounted.current) return;
-        setResults(result.results);
-        setIsCompleted(true);
-        
-        // Show achievement notifications if any
-        if (result.new_achievements && result.new_achievements.length > 0) {
-          Alert.alert(
-            'Achievement Unlocked! 🏆',
-            result.new_achievements.map((a: any) => a.name).join(', ')
-          );
-        }
       } else {
-        throw new Error(result.error || 'Failed to submit quiz');
-      }
+      setQuiz(dailyQuiz);
+      setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
     } catch (error) {
       console.error('Error submitting quiz:', error);
       Alert.alert('Error', 'Failed to submit quiz. Please try again.');
@@ -305,10 +200,36 @@ export default function DailyQuizScreen() {
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-      setSelectedAnswer(userAnswers[currentQuestionIndex - 1] !== -1 ? userAnswers[currentQuestionIndex - 1] : null);
-      setShowExplanation(false);
-    } else {
-      router.back();
+      console.error('Error loading daily quiz:', error);
+      // Don't show alert, just use demo data
+      if (!isMounted.current) return;
+      
+      // Final fallback quiz
+      const errorFallbackQuiz: DailyQuiz = {
+        id: 'error-fallback-quiz',
+        date: new Date().toISOString().split('T')[0],
+        questions: [
+          {
+            id: 'dq1',
+            question: 'What is the capital of India?',
+            options: ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
+            correct_answer: 1,
+            explanation: 'New Delhi is the capital city of India.',
+            subject: 'Geography',
+            subtopic: 'Indian Geography',
+            difficulty: 'easy',
+            points: 10,
+          },
+        ],
+        total_points: 10,
+        difficulty_distribution: { easy: 1, medium: 0, hard: 0 },
+        subjects_covered: ['Geography'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+      
+      setQuiz(errorFallbackQuiz);
+      setUserAnswers(new Array(errorFallbackQuiz.questions.length).fill(-1));
     }
   };
 
