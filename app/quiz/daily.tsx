@@ -306,6 +306,79 @@ export default function DailyQuizScreen() {
         correct_answers: correctCount,
         total_questions: quiz!.questions.length,
         score_percentage: percentage,
+        total_points: Math.round(percentage * 2),
+        time_spent: timeSpent,
+        xp_earned: Math.round(percentage * 1.5),
+        detailed_results: quiz!.questions.map((q, index) => ({
+          question_id: q.id,
+          question: q.question,
+          options: q.options,
+          user_answer: userAnswers[index],
+          correct_answer: q.correct_answer,
+          is_correct: userAnswers[index] === q.correct_answer,
+          explanation: q.explanation,
+          subject: q.subject,
+          subtopic: q.subtopic,
+          difficulty: q.difficulty,
+          points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
+        })),
+        grok_message: getGrokMessage(percentage, correctCount, quiz!.questions.length),
+        mascot_celebration: getMascotCelebration(percentage)
+      };
+      
+      setResults(localResults);
+      setIsCompleted(true);
+    } finally {
+      if (!isMounted.current) return;
+      setIsSubmitting(false);
+    }
+  };
+
+  const getGrokMessage = (percentage: number, correct: number, total: number): string => {
+    if (percentage === 100) {
+      return "🎯 Perfect score! You're basically a walking encyclopedia of Indian knowledge! Time to challenge Einstein! 🧠✨";
+    } else if (percentage >= 90) {
+      return "🌟 Outstanding! You're so smart, even Google would ask you for answers! Keep this momentum going! 🚀";
+    } else if (percentage >= 80) {
+      return "💪 Excellent work! You're crushing it like Bhagat Singh crushed the British morale! 🇮🇳";
+    } else if (percentage >= 70) {
+      return "📚 Good job! You're on the right track - just need to channel your inner Chandragupta Maurya! 👑";
+    } else if (percentage >= 60) {
+      return "🎯 Not bad! Rome wasn't built in a day, and neither was the Taj Mahal. Keep practicing! 🏛️";
+    } else if (percentage >= 50) {
+      return "🤔 Hmm, looks like you need to spend more time with books than with Netflix! But hey, we all start somewhere! 📖";
+    } else {
+      return "😅 Well, at least you showed up! That's more than what some Mughal emperors did for their empire! Try again tomorrow! 💪";
+    }
+  };
+
+  const getMascotCelebration = (percentage: number): string => {
+    if (percentage >= 90) return 'celebrating';
+    if (percentage >= 70) return 'excited';
+    if (percentage >= 50) return 'happy';
+    return 'encouraging';
+    } catch (error) {
+      console.error('❌ Error submitting quiz:', error);
+      
+      if (!isMounted.current) return;
+      
+      // Show error but still display results
+      Alert.alert(
+        'Submission Error',
+        'Quiz completed but results may not be saved. You can still view your performance.',
+        [{ text: 'View Results', onPress: () => {} }]
+      );
+      
+      // Create comprehensive local results as fallback
+      const correctCount = userAnswers.filter((answer, index) => 
+        answer === quiz!.questions[index].correct_answer
+      ).length;
+      const percentage = Math.round((correctCount / quiz!.questions.length) * 100);
+      
+      const localResults = {
+        correct_answers: correctCount,
+        total_questions: quiz!.questions.length,
+        score_percentage: percentage,
         total_points: Math.round(percentage * 2), // Approximate points
         time_spent: timeSpent,
         xp_earned: Math.round(percentage * 1.5), // Approximate XP
