@@ -89,6 +89,7 @@ const DEMO_TOPICS: SubjectTopic[] = [
 ];
 
 export default function SubjectQuizScreen() {
+  const isMounted = useRef(true);
   const params = useLocalSearchParams();
   const { subjectId, subjectName } = params;
   
@@ -102,8 +103,13 @@ export default function SubjectQuizScreen() {
   const topicsOpacity = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     loadSubjectTopics();
     startAnimations();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [subjectId]);
 
   const startAnimations = () => {
@@ -114,19 +120,23 @@ export default function SubjectQuizScreen() {
 
   const loadSubjectTopics = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
         // Use demo topics
         setTopics(DEMO_TOPICS);
         setIsLoading(false);
         return;
       }
       
+      if (!isMounted.current) return;
       const subjectTopics = await SupabaseService.getSubjectTopics(subjectId as string);
       setTopics(subjectTopics);
     } catch (error) {
       console.error('Error loading subject topics:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };

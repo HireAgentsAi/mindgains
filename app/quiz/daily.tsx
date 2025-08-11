@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,7 @@ import type { DailyQuiz, DailyQuizQuestion } from '@/utils/supabaseService';
 const { width = 375 } = Dimensions.get('window') || {};
 
 export default function DailyQuizScreen() {
+  const isMounted = useRef(true);
   const params = useLocalSearchParams();
   const { quizId } = params;
   
@@ -67,6 +68,7 @@ export default function DailyQuizScreen() {
   const progressPulse = useSharedValue(1);
 
   useEffect(() => {
+    isMounted.current = true;
     loadDailyQuiz();
     
     // Track time spent
@@ -94,11 +96,15 @@ export default function DailyQuizScreen() {
       false
     );
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      isMounted.current = false;
+    };
   }, [quizId]);
 
   const loadDailyQuiz = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
         // Use demo quiz
@@ -147,6 +153,7 @@ export default function DailyQuizScreen() {
           created_at: new Date().toISOString(),
         };
         
+        if (!isMounted.current) return;
         setQuiz(demoQuiz);
         setUserAnswers(new Array(demoQuiz.questions.length).fill(-1));
         setIsLoading(false);
@@ -155,6 +162,7 @@ export default function DailyQuizScreen() {
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
+        if (!isMounted.current) return;
         router.replace('/auth');
         return;
       }
@@ -169,6 +177,7 @@ export default function DailyQuizScreen() {
       const attempt = await SupabaseService.getDailyQuizAttempt(user.id);
       if (attempt) {
         // User already attempted, show results
+        if (!isMounted.current) return;
         router.replace({
           pathname: '/quiz/daily-results',
           params: { attemptId: attempt.id }
@@ -176,13 +185,16 @@ export default function DailyQuizScreen() {
         return;
       }
 
+      if (!isMounted.current) return;
       setQuiz(dailyQuiz);
       setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
     } catch (error) {
       console.error('Error loading daily quiz:', error);
       Alert.alert('Error', 'Failed to load today\'s quiz. Please try again.');
+      if (!isMounted.current) return;
       router.back();
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };
@@ -257,6 +269,7 @@ export default function DailyQuizScreen() {
           }))
         };
         
+        if (!isMounted.current) return;
         setResults(demoResults);
         setIsCompleted(true);
         setIsSubmitting(false);
@@ -266,6 +279,7 @@ export default function DailyQuizScreen() {
       const result = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
       
       if (result.success) {
+        if (!isMounted.current) return;
         setResults(result.results);
         setIsCompleted(true);
         
@@ -283,6 +297,7 @@ export default function DailyQuizScreen() {
       console.error('Error submitting quiz:', error);
       Alert.alert('Error', 'Failed to submit quiz. Please try again.');
     } finally {
+      if (!isMounted.current) return;
       setIsSubmitting(false);
     }
   };

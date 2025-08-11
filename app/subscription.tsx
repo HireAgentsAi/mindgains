@@ -114,6 +114,7 @@ function FloatingParticle({ index }: { index: number }) {
 }
 
 export default function SubscriptionScreen() {
+  const isMounted = useRef(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [userLimits, setUserLimits] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -129,6 +130,7 @@ export default function SubscriptionScreen() {
   const crownRotation = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     loadSubscriptionData();
     
     // Start animations
@@ -145,6 +147,10 @@ export default function SubscriptionScreen() {
       false
     );
     
+    return () => {
+      isMounted.current = false;
+    };
+    
     crownRotation.value = withRepeat(
       withSequence(
         withTiming(10, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
@@ -157,22 +163,26 @@ export default function SubscriptionScreen() {
 
   const loadSubscriptionData = async () => {
     try {
+      if (!isMounted.current) return;
       const [subscriptionPlans, userLimitsData] = await Promise.all([
         SupabaseService.getSubscriptionPlans(),
         loadUserLimits()
       ]);
       
+      if (!isMounted.current) return;
       setPlans(subscriptionPlans);
       setUserLimits(userLimitsData);
     } catch (error) {
       console.error('Error loading subscription data:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };
 
   const loadUserLimits = async () => {
     try {
+      if (!isMounted.current) return;
       const user = await SupabaseService.getCurrentUser();
       if (!user) return null;
       

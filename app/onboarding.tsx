@@ -185,6 +185,7 @@ const onboardingSteps: OnboardingStep[] = [
 ];
 
 export default function OnboardingScreen() {
+  const isMounted = useRef(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -200,6 +201,7 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     setIsMounted(true);
+    isMounted.current = true;
     
     // Check if user is authenticated with error handling
     const initializeOnboarding = async () => {
@@ -228,17 +230,21 @@ export default function OnboardingScreen() {
       -1,
       false
     );
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [currentStep]);
 
   const checkUserStatus = async () => {
     try {
       // Check if component is still mounted before making async calls
-      if (!isMounted) return;
+      if (!isMounted.current) return;
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
         // User not authenticated, redirect to auth
-        if (!isMounted) return;
+        if (!isMounted.current) return;
         router.replace('/auth');
         return;
       }
@@ -246,7 +252,7 @@ export default function OnboardingScreen() {
       const profile = await SupabaseService.getProfile(user.id);
       if (profile?.full_name) {
         // User already has profile, redirect to main app
-        if (!isMounted) return;
+        if (!isMounted.current) return;
         router.replace('/(tabs)');
         return;
       }
@@ -322,6 +328,7 @@ export default function OnboardingScreen() {
     setIsLoading(true);
     
     try {
+      if (!isMounted.current) return;
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
         throw new Error('No user found');
@@ -333,11 +340,13 @@ export default function OnboardingScreen() {
       });
 
       // Navigate to main app
+      if (!isMounted.current) return;
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -36,6 +37,7 @@ interface TopicQuestion {
 }
 
 export default function TopicQuizScreen() {
+  const isMounted = useRef(true);
   const params = useLocalSearchParams();
   const { topicId, topicName, subjectName } = params;
   
@@ -56,6 +58,7 @@ export default function TopicQuizScreen() {
   const optionScale = useSharedValue(1);
 
   useEffect(() => {
+    isMounted.current = true;
     loadTopicQuestions();
     
     // Track time spent
@@ -64,6 +67,10 @@ export default function TopicQuizScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [topicId]);
 
   useEffect(() => {
@@ -75,11 +82,13 @@ export default function TopicQuizScreen() {
 
   const loadTopicQuestions = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if user can take quiz
       const user = await SupabaseService.getCurrentUser();
       if (user) {
         const limits = await SupabaseService.checkUserLimits(user.id);
         if (!limits.canTakeQuiz) {
+          if (!isMounted.current) return;
           Alert.alert(
             'Daily Limit Reached',
             `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
@@ -107,6 +116,7 @@ export default function TopicQuizScreen() {
         );
         
         if (result.success && result.questions) {
+          if (!isMounted.current) return;
           // Convert AI questions to TopicQuestion format
           const aiQuestions = result.questions.map((q: any, index: number) => ({
             id: `ai_${index}`,
@@ -125,6 +135,7 @@ export default function TopicQuizScreen() {
           throw new Error(result.error || 'Failed to generate questions');
         }
       } else {
+        if (!isMounted.current) return;
         // Use existing questions, randomly select 10
         const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
         const selectedQuestions = shuffled.slice(0, 10);
@@ -135,8 +146,10 @@ export default function TopicQuizScreen() {
     } catch (error) {
       console.error('Error loading topic questions:', error);
       Alert.alert('Error', 'Failed to load or generate quiz questions. Please try again.');
+      if (!isMounted.current) return;
       router.back();
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };
@@ -211,6 +224,7 @@ export default function TopicQuizScreen() {
         }))
       };
       
+      if (!isMounted.current) return;
       // Update user progress
       await SupabaseService.updateTopicProgress(quizResults);
       

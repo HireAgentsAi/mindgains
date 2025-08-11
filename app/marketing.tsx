@@ -31,6 +31,7 @@ import { demoMarketingData } from '@/utils/demoData';
 const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 export default function MarketingScreen() {
+  const isMounted = useRef(true);
   const [metrics, setMetrics] = useState<MarketingMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -45,14 +46,21 @@ export default function MarketingScreen() {
   const floatingY = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     loadMarketingData();
     startAnimations();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const loadMarketingData = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
         // Use demo marketing data
         const demoMetrics: MarketingMetrics = {
           totalUsers: 156789,
@@ -78,6 +86,7 @@ export default function MarketingScreen() {
         return;
       }
       
+      if (!isMounted.current) return;
       const marketingMetrics = await MarketingService.getMarketingMetrics();
       setMetrics(marketingMetrics);
       
@@ -86,6 +95,7 @@ export default function MarketingScreen() {
     } catch (error) {
       console.error('Error loading marketing data:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };

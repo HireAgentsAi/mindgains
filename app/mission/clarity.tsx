@@ -47,6 +47,7 @@ interface AdaptiveLearningContent {
 }
 
 export default function ClarityRoomScreen() {
+  const isMounted = useRef(true);
   const params = useLocalSearchParams();
   const { missionId } = params;
   
@@ -68,6 +69,7 @@ export default function ClarityRoomScreen() {
   const tabsTranslateY = useSharedValue(30);
 
   useEffect(() => {
+    isMounted.current = true;
     loadMissionContent();
     
     // Track time spent
@@ -100,11 +102,13 @@ export default function ClarityRoomScreen() {
     return () => {
       clearInterval(interval);
       clearInterval(progressInterval);
+      isMounted.current = false;
     };
   }, [missionId]);
 
   useEffect(() => {
     if (content) {
+      if (!isMounted.current) return;
       cardOpacity.value = withTiming(1, { duration: 800 });
       cardTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
       tabsOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
@@ -115,8 +119,10 @@ export default function ClarityRoomScreen() {
 
   const loadMissionContent = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured or if it's a demo mission
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL || (missionId as string).startsWith('demo_')) {
+        if (!isMounted.current) return;
         // Use demo content
         const demoContent: AdaptiveLearningContent = {
           overview: "This is a comprehensive learning mission about Indian Constitution's Fundamental Rights. You'll explore Articles 12-35 which form the cornerstone of individual liberty in India.",
@@ -204,11 +210,13 @@ export default function ClarityRoomScreen() {
           estimatedTime: "25 minutes"
         };
         
+        if (!isMounted.current) return;
         setContent(demoContent);
         setIsLoading(false);
         return;
       }
       
+      if (!isMounted.current) return;
       const result = await SupabaseService.getMissionContent(missionId as string, 'clarity');
       if (result.success && result.content.learning_content) {
         setContent(result.content.learning_content);
@@ -216,6 +224,7 @@ export default function ClarityRoomScreen() {
     } catch (error) {
       console.error('Error loading mission content:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };
@@ -230,8 +239,10 @@ export default function ClarityRoomScreen() {
 
   const handleContinue = async () => {
     try {
+      if (!isMounted.current) return;
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
+        if (!isMounted.current) return;
         router.replace('/auth');
         return;
       }
@@ -254,6 +265,7 @@ export default function ClarityRoomScreen() {
       });
 
       // Navigate to quiz
+      if (!isMounted.current) return;
       router.push({
         pathname: '/mission/quiz',
         params: { missionId },
@@ -261,6 +273,7 @@ export default function ClarityRoomScreen() {
     } catch (error) {
       console.error('Error updating progress:', error);
       // Navigate anyway
+      if (!isMounted.current) return;
       router.push({
         pathname: '/mission/quiz',
         params: { missionId },
