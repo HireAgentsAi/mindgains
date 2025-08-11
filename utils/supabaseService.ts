@@ -1099,6 +1099,12 @@ export class SupabaseService {
 
   static async getTopicQuestions(topicId: string): Promise<TopicQuestion[]> {
     try {
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        console.log('Using demo topic questions - Supabase not configured')
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from('topic_questions')
         .select('*')
@@ -1247,6 +1253,9 @@ export class SupabaseService {
   // Generate topic quiz on-demand with AI
   static async generateTopicQuiz(topicName: string, subjectName: string, difficulty: string = 'mixed', questionCount: number = 15) {
     try {
+      // Ensure minimum 15 questions
+      const finalQuestionCount = Math.max(15, questionCount);
+      
       console.log('Generating topic quiz:', { topicName, subjectName, difficulty, questionCount })
       
       const { data, error } = await supabase.functions.invoke('generate-topic-quiz', {
@@ -1254,7 +1263,7 @@ export class SupabaseService {
           topic_name: topicName,
           subject_name: subjectName,
           difficulty,
-          question_count: questionCount
+          question_count: finalQuestionCount
         }
       })
       

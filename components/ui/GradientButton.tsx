@@ -7,17 +7,20 @@ import {
   TextStyle,
   GestureResponderEvent,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 
 interface GradientButtonProps {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
+  colors?: string[];
   style?: ViewStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
@@ -30,6 +33,7 @@ interface GradientButtonProps {
 export default function GradientButton({
   title,
   onPress,
+  colors = [theme.colors.accent.purple, theme.colors.accent.blue],
   style,
   textStyle,
   disabled = false,
@@ -85,20 +89,22 @@ export default function GradientButton({
     switch (variant) {
       case 'secondary':
         return {
-          backgroundColor: theme.colors.background.secondary,
+          colors: [theme.colors.background.card, theme.colors.background.secondary],
+          textColor: theme.colors.text.primary,
           borderWidth: 1,
           borderColor: theme.colors.border.primary,
-          textColor: theme.colors.text.primary,
         };
       case 'ghost':
         return {
-          backgroundColor: 'transparent',
+          colors: ['transparent', 'transparent'],
           textColor: theme.colors.accent.purple,
+          borderWidth: 0,
         };
       default:
         return {
-          backgroundColor: theme.colors.accent.purple,
+          colors: colors,
           textColor: theme.colors.text.primary,
+          borderWidth: 0,
         };
     }
   };
@@ -120,40 +126,47 @@ export default function GradientButton({
         style,
       ]}
     >
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled}
-        activeOpacity={0.8}
+      <LinearGradient
+        colors={disabled ? [theme.colors.text.muted, theme.colors.text.muted] : variantStyles.colors}
         style={[
-          styles.button,
+          styles.gradient,
           {
             height: sizeStyles.height,
-            paddingHorizontal: sizeStyles.paddingHorizontal,
-            backgroundColor: disabled 
-              ? theme.colors.text.quaternary 
-              : variantStyles.backgroundColor,
             borderWidth: variantStyles.borderWidth || 0,
             borderColor: variantStyles.borderColor,
           },
-          variant === 'primary' && theme.shadows.sm,
+          variant === 'primary' && theme.shadows.button,
         ]}
       >
-        {icon && <>{icon}</>}
-        <Text
+        <TouchableOpacity
+          onPress={handlePress}
+          disabled={disabled}
+          activeOpacity={0.8}
           style={[
-            styles.text,
+            styles.button,
             {
-              fontSize: sizeStyles.fontSize,
-              color: disabled 
-                ? theme.colors.text.tertiary 
-                : variantStyles.textColor,
+              height: sizeStyles.height,
+              paddingHorizontal: sizeStyles.paddingHorizontal,
             },
-            textStyle,
           ]}
         >
-          {title}
-        </Text>
-      </TouchableOpacity>
+          {icon && <>{icon}</>}
+          <Text
+            style={[
+              styles.text,
+              {
+                fontSize: sizeStyles.fontSize,
+                color: disabled 
+                  ? theme.colors.text.tertiary 
+                  : variantStyles.textColor,
+              },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </TouchableOpacity>
+      </LinearGradient>
     </Animated.View>
   );
 }
@@ -161,17 +174,20 @@ export default function GradientButton({
 const styles = StyleSheet.create({
   container: {
     borderRadius: theme.borderRadius.md,
+    overflow: 'hidden',
+  },
+  gradient: {
+    borderRadius: theme.borderRadius.md,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.md,
     gap: theme.spacing.sm,
   },
   text: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: theme.fonts.subheading,
     textAlign: 'center',
   },
 });

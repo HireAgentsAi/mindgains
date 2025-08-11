@@ -18,6 +18,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { ChevronLeft, Target, Clock, CircleCheck as CheckCircle, X, ArrowRight, Trophy, Star, Brain } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
@@ -308,25 +309,25 @@ export default function TopicQuizScreen() {
 
             <View style={styles.resultsStats}>
               <View style={styles.resultStat}>
-                <CheckCircle size={24} color={theme.colors.accent.green} />
+                <FontAwesome5 name="check-circle" size={20} color={theme.colors.accent.green} solid />
                 <Text style={styles.resultStatValue}>{results.questions_correct}</Text>
                 <Text style={styles.resultStatLabel}>Correct</Text>
               </View>
               
               <View style={styles.resultStat}>
-                <X size={24} color={theme.colors.accent.pink} />
+                <FontAwesome5 name="times-circle" size={20} color={theme.colors.accent.pink} solid />
                 <Text style={styles.resultStatValue}>{results.questions_attempted - results.questions_correct}</Text>
                 <Text style={styles.resultStatLabel}>Incorrect</Text>
               </View>
               
               <View style={styles.resultStat}>
-                <Clock size={24} color={theme.colors.accent.blue} />
+                <FontAwesome5 name="clock" size={20} color={theme.colors.accent.blue} solid />
                 <Text style={styles.resultStatValue}>{Math.round(results.time_spent / 60)}m</Text>
                 <Text style={styles.resultStatLabel}>Time</Text>
               </View>
               
               <View style={styles.resultStat}>
-                <Star size={24} color={theme.colors.accent.yellow} />
+                <FontAwesome5 name="star" size={20} color={theme.colors.accent.yellow} solid />
                 <Text style={styles.resultStatValue}>{results.total_points}</Text>
                 <Text style={styles.resultStatLabel}>Points</Text>
               </View>
@@ -338,7 +339,7 @@ export default function TopicQuizScreen() {
                 onPress={() => router.back()}
                 size="large"
                 fullWidth
-                icon={<Brain size={20} color={theme.colors.text.primary} />}
+                icon={<FontAwesome5 name="brain" size={16} color={theme.colors.text.primary} solid />}
                 colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
                 style={styles.actionButton}
               />
@@ -346,10 +347,11 @@ export default function TopicQuizScreen() {
               <GradientButton
                 title="Back to Subjects"
                 onPress={() => router.replace('/(tabs)/learn')}
+              <FontAwesome5 name="layer-group" size={10} color={theme.colors.accent.blue} />
                 size="large"
                 fullWidth
-                icon={<ArrowRight size={20} color={theme.colors.text.primary} />}
-                colors={[theme.colors.accent.green, theme.colors.accent.cyan]}
+                icon={<FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />}
+              <FontAwesome5 name="star" size={10} color={theme.colors.accent.yellow} solid />
               />
             </View>
           </View>
@@ -383,7 +385,7 @@ export default function TopicQuizScreen() {
             colors={[theme.colors.background.card, theme.colors.background.secondary]}
             style={styles.backButtonGradient}
           >
-            <ChevronLeft size={24} color={theme.colors.text.primary} />
+            <FontAwesome5 name="chevron-left" size={20} color={theme.colors.text.primary} />
           </LinearGradient>
         </TouchableOpacity>
         
@@ -397,13 +399,19 @@ export default function TopicQuizScreen() {
             />
           </Animated.View>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>{topicName}</Text>
-            <Text style={styles.headerSubtitle}>{subjectName} Quiz</Text>
+            <Text style={styles.headerTitle}>
+              <FontAwesome5 name="bullseye" size={16} color={theme.colors.accent.purple} solid />
+              {' '}{topicName}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              <FontAwesome5 name="book" size={12} color={theme.colors.text.secondary} />
+              {' '}{subjectName} Quiz
+            </Text>
           </View>
         </View>
         
         <View style={styles.timerContainer}>
-          <Clock size={16} color={theme.colors.accent.blue} />
+          <FontAwesome5 name="clock" size={14} color={theme.colors.accent.blue} solid />
           <Text style={styles.timerText}>{Math.floor(timeSpent / 60)}:{(timeSpent % 60).toString().padStart(2, '0')}</Text>
         </View>
       </View>
@@ -469,10 +477,10 @@ export default function TopicQuizScreen() {
                         </View>
                         <Text style={styles.optionText}>{option}</Text>
                         {showExplanation && index === currentQuestion.correct_answer && (
-                          <CheckCircle size={20} color={theme.colors.accent.green} />
+                          <FontAwesome5 name="check-circle" size={18} color={theme.colors.accent.green} solid />
                         )}
                         {showExplanation && selectedAnswer === index && index !== currentQuestion.correct_answer && (
-                          <X size={20} color={theme.colors.accent.pink} />
+                          <FontAwesome5 name="times-circle" size={18} color={theme.colors.accent.pink} solid />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -483,14 +491,14 @@ export default function TopicQuizScreen() {
               {showExplanation && (
                 <View style={styles.explanationContainer}>
                   <View style={styles.explanationHeader}>
-                    <Brain size={20} color={theme.colors.accent.purple} />
+                    <FontAwesome5 name="brain" size={16} color={theme.colors.accent.purple} solid />
                     <Text style={styles.explanationTitle}>Explanation</Text>
                   </View>
                   <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
                   
                   {currentQuestion.exam_relevance && (
                     <View style={styles.examRelevanceContainer}>
-                      <Target size={16} color={theme.colors.accent.green} />
+                      <FontAwesome5 name="bullseye" size={14} color={theme.colors.accent.green} solid />
                       <Text style={styles.examRelevanceText}>{currentQuestion.exam_relevance}</Text>
                     </View>
                   )}
@@ -518,7 +526,7 @@ export default function TopicQuizScreen() {
             onPress={handleNextQuestion}
             size="large"
             fullWidth
-            icon={<ArrowRight size={20} color={theme.colors.text.primary} />}
+            icon={<FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />}
             colors={[theme.colors.accent.green, theme.colors.accent.cyan]}
           />
         )}

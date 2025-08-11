@@ -34,6 +34,7 @@ import {
   Brain,
   Zap
 } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
@@ -496,13 +497,19 @@ export default function DailyQuizScreen() {
             />
           </Animated.View>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>📅 Daily Quiz</Text>
-            <Text style={styles.headerSubtitle}>India Knowledge Challenge</Text>
+            <Text style={styles.headerTitle}>
+              <FontAwesome5 name="calendar-day" size={16} color={theme.colors.accent.purple} solid />
+              {' '}Daily Quiz
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              <FontAwesome5 name="flag" size={12} color={theme.colors.text.secondary} />
+              {' '}India Knowledge Challenge
+            </Text>
           </View>
         </View>
         
         <View style={styles.timerContainer}>
-          <Clock size={16} color={theme.colors.accent.blue} />
+          <FontAwesome5 name="clock" size={14} color={theme.colors.accent.blue} solid />
           <Text style={styles.timerText}>{Math.floor(timeSpent / 60)}:{(timeSpent % 60).toString().padStart(2, '0')}</Text>
         </View>
       </View>
@@ -543,10 +550,11 @@ export default function DailyQuizScreen() {
           
           <View style={styles.questionMeta}>
             <View style={styles.difficultyBadge}>
+              <FontAwesome5 name="layer-group" size={10} color={theme.colors.accent.blue} />
               <Text style={styles.difficultyText}>{currentQuestion.difficulty}</Text>
             </View>
             <View style={styles.pointsBadge}>
-              <Star size={12} color={theme.colors.accent.yellow} />
+              <FontAwesome5 name="star" size={10} color={theme.colors.accent.yellow} solid />
               <Text style={styles.pointsText}>{currentQuestion.points} pts</Text>
             </View>
           </View>
@@ -605,10 +613,10 @@ export default function DailyQuizScreen() {
                           {option}
                         </Text>
                         {showExplanation && index === currentQuestion.correct_answer && (
-                          <CheckCircle size={20} color={theme.colors.accent.green} />
+                          <FontAwesome5 name="check-circle" size={18} color={theme.colors.accent.green} solid />
                         )}
                         {showExplanation && selectedAnswer === index && index !== currentQuestion.correct_answer && (
-                          <X size={20} color={theme.colors.accent.pink} />
+                          <FontAwesome5 name="times-circle" size={18} color={theme.colors.accent.pink} solid />
                         )}
                       </View>
                     </TouchableOpacity>
@@ -619,7 +627,7 @@ export default function DailyQuizScreen() {
               {showExplanation && (
                 <View style={styles.explanationContainer}>
                   <View style={styles.explanationHeader}>
-                    <Brain size={20} color={theme.colors.accent.purple} />
+                    <FontAwesome5 name="brain" size={16} color={theme.colors.accent.purple} solid />
                     <Text style={styles.explanationTitle}>Explanation</Text>
                   </View>
                   <Text style={styles.explanationText}>{currentQuestion.explanation}</Text>
@@ -644,7 +652,7 @@ export default function DailyQuizScreen() {
         ) : (
           <GradientButton
             title={
-              isSubmitting 
+            icon={<FontAwesome5 name="brain" size={16} color={theme.colors.text.primary} solid />}
                 ? "Submitting..." 
                 : currentQuestionIndex < quiz.questions.length - 1 
                   ? "Next Question" 
@@ -654,7 +662,7 @@ export default function DailyQuizScreen() {
             size="large"
             fullWidth
             disabled={isSubmitting}
-            icon={<ArrowRight size={20} color={theme.colors.text.primary} />}
+            icon={<FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />}
             colors={[theme.colors.accent.green, theme.colors.accent.cyan]}
           />
         )}

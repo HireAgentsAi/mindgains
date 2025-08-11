@@ -30,6 +30,7 @@ import {
   Users,
   Award,
 } from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
 
@@ -144,7 +145,7 @@ export default function Learn() {
       id: 'daily',
       title: 'Daily Quiz',
       subtitle: 'Quick 10-question challenge',
-      icon: Play,
+      icon: 'play-circle',
       color: theme.colors.accent.purple,
       onPress: () => router.push('/quiz/daily'),
     },
@@ -152,7 +153,7 @@ export default function Learn() {
       id: 'practice',
       title: 'Practice Mode',
       subtitle: 'Unlimited practice questions',
-      icon: Target,
+      icon: 'bullseye',
       color: theme.colors.accent.green,
       onPress: () => router.push('/quiz/practice'),
     },
@@ -160,7 +161,7 @@ export default function Learn() {
       id: 'mock',
       title: 'Mock Test',
       subtitle: 'Full-length exam simulation',
-      icon: Clock,
+      icon: 'clock',
       color: theme.colors.accent.yellow,
       onPress: () => router.push('/quiz/mock'),
     },
@@ -168,7 +169,7 @@ export default function Learn() {
       id: 'compete',
       title: 'Compete',
       subtitle: 'Challenge friends',
-      icon: Users,
+      icon: 'user-friends',
       color: theme.colors.accent.pink,
       onPress: () => router.push('/compete'),
     },
@@ -236,7 +237,6 @@ export default function Learn() {
   };
 
   const QuickActionCard = ({ action }: { action: QuickAction }) => {
-    const IconComponent = action.icon;
     
     return (
       <TouchableOpacity
@@ -249,7 +249,7 @@ export default function Learn() {
           style={styles.actionGradient}
         >
           <View style={styles.actionIcon}>
-            <IconComponent size={24} color="#ffffff" />
+            <FontAwesome5 name={action.icon} size={20} color="#ffffff" solid />
           </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>{action.title}</Text>
@@ -267,10 +267,16 @@ export default function Learn() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <BookOpen size={24} color={theme.colors.accent.purple} />
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-            Learn
-          </Text>
+          <LinearGradient
+            colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+            style={styles.headerIcon}
+          >
+            <FontAwesome5 name="graduation-cap" size={20} color={theme.colors.text.primary} solid />
+          </LinearGradient>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Learn</Text>
+            <Text style={styles.headerSubtitle}>Explore subjects & topics</Text>
+          </View>
         </View>
       </View>
 
@@ -282,15 +288,15 @@ export default function Learn() {
         >
           <View style={styles.progressStats}>
             <View style={styles.statItem}>
-              <Crown size={20} color="#ffffff" />
+              <FontAwesome5 name="crown" size={16} color="#ffffff" solid />
               <Text style={styles.statValue}>Level {userProgress.currentLevel}</Text>
             </View>
             <View style={styles.statItem}>
-              <Trophy size={20} color="#ffffff" />
+              <FontAwesome5 name="trophy" size={16} color="#ffffff" solid />
               <Text style={styles.statValue}>{userProgress.totalXP} XP</Text>
             </View>
             <View style={styles.statItem}>
-              <Award size={20} color="#ffffff" />
+              <FontAwesome5 name="medal" size={16} color="#ffffff" solid />
               <Text style={styles.statValue}>{userProgress.streakDays} day streak</Text>
             </View>
           </View>
@@ -353,12 +359,32 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
+  },
+  
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.button,
+  },
+  
+  headerText: {
+    flex: 1,
   },
   
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
+  
+  headerSubtitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
   },
   
   progressOverview: {
@@ -381,13 +407,13 @@ const styles = StyleSheet.create({
   
   statItem: {
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: 6,
   },
   
   statValue: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontFamily: theme.fonts.subheading,
   },
   
   content: {
@@ -429,7 +455,7 @@ const styles = StyleSheet.create({
   actionIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: theme.borderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -443,7 +469,7 @@ const styles = StyleSheet.create({
   actionTitle: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: theme.fonts.subheading,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
@@ -451,6 +477,7 @@ const styles = StyleSheet.create({
   actionSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
+    fontFamily: theme.fonts.caption,
     textAlign: 'center',
   },
   

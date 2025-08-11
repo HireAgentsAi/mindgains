@@ -7,41 +7,36 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  StatusBar,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  withSpring,
+  withSequence,
+  withRepeat,
   interpolate,
+  Easing,
 } from 'react-native-reanimated';
-import { 
-  User, 
-  Settings, 
-  Trophy, 
-  Star, 
-  Crown, 
-  Bell, 
-  HelpCircle, 
-  LogOut, 
-  Edit3, 
-  ChevronRight, 
-  Share2,
-  Zap,
-  Target,
-  Award,
-  Medal,
-} from 'lucide-react-native';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
+import MascotAvatar from '@/components/ui/MascotAvatar';
+import GradientButton from '@/components/ui/GradientButton';
+import { SupabaseService } from '@/utils/supabaseService';
+import { demoUserProfile, demoUserStats, demoUserAchievements, demoAchievements } from '@/utils/demoData';
 
 interface Achievement {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  icon: any;
+  icon: string;
+  category: string;
+  badge_color: string;
   unlocked: boolean;
   progress?: number;
   maxProgress?: number;
@@ -62,70 +57,134 @@ interface UserStats {
   streak_days: number;
   missions_completed: number;
   rank: string;
-  accuracy: number;
+  total_study_time: number;
 }
 
 export default function Profile() {
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: 'user-123',
-    full_name: 'Learning Explorer',
-    email: 'explorer@mindgains.ai',
-    bio: 'Expanding knowledge through AI-powered learning',
-    created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-  
-  const [userStats, setUserStats] = useState<UserStats>({
-    total_xp: 8750,
-    current_level: 15,
-    streak_days: 23,
-    missions_completed: 47,
-    rank: 'Expert Learner',
-    accuracy: 87.5,
-  });
-
-  const [achievements, setAchievements] = useState<Achievement[]>([
-    {
-      id: '1',
-      title: 'First Steps',
-      description: 'Complete your first quiz',
-      icon: Star,
-      unlocked: true,
-    },
-    {
-      id: '2',
-      title: 'Knowledge Seeker',
-      description: 'Answer 100 questions correctly',
-      icon: Target,
-      unlocked: true,
-    },
-    {
-      id: '3',
-      title: 'Streak Master',
-      description: 'Maintain 30-day learning streak',
-      icon: Zap,
-      unlocked: false,
-      progress: 23,
-      maxProgress: 30,
-    },
-    {
-      id: '4',
-      title: 'Quiz Champion',
-      description: 'Score perfect on 10 quizzes',
-      icon: Trophy,
-      unlocked: false,
-      progress: 6,
-      maxProgress: 10,
-    },
-  ]);
-
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Animation values
   const fadeIn = useSharedValue(0);
+  const headerScale = useSharedValue(0.9);
+  const statsOpacity = useSharedValue(0);
+  const achievementsOpacity = useSharedValue(0);
+  const mascotScale = useSharedValue(1);
+  const xpCounterValue = useSharedValue(0);
+  const levelProgress = useSharedValue(0);
+  const shimmerPosition = useSharedValue(-1);
 
   useEffect(() => {
-    fadeIn.value = withTiming(1, { duration: 800 });
+    loadProfileData();
+    startAnimations();
   }, []);
+
+  const startAnimations = () => {
+    fadeIn.value = withTiming(1, { duration: 800 });
+    headerScale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    statsOpacity.value = withTiming(1, { duration: 600, delay: 300 });
+    achievementsOpacity.value = withTiming(1, { duration: 600, delay: 600 });
+    
+    // Mascot celebration
+    mascotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
+    );
+    
+    // Shimmer effect
+    shimmerPosition.value = withRepeat(
+      withTiming(1, { duration: 2000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  };
+
+  const loadProfileData = async () => {
+    try {
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        // Use demo data
+        setUserProfile(demoUserProfile);
+        setUserStats(demoUserStats);
+        
+        // Map demo achievements
+        const mappedAchievements = demoAchievements.map(achievement => {
+          const userAchievement = demoUserAchievements.find(ua => ua.achievement_id === achievement.id);
+          return {
+            ...achievement,
+            unlocked: userAchievement?.completed || false,
+            progress: userAchievement?.progress || 0,
+            maxProgress: achievement.required_value,
+          };
+        });
+        
+        setAchievements(mappedAchievements);
+        
+        // Animate XP counter
+        xpCounterValue.value = withTiming(demoUserStats.total_xp, { duration: 2000 });
+        
+        // Animate level progress
+        const currentLevelXP = (demoUserStats.current_level - 1) * 1000;
+        const nextLevelXP = demoUserStats.current_level * 1000;
+        const progress = ((demoUserStats.total_xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+        levelProgress.value = withTiming(progress, { duration: 1500, delay: 500 });
+        
+        setIsLoading(false);
+        return;
+      }
+      
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        router.replace('/auth');
+        return;
+      }
+
+      const [profile, stats, userAchievements, allAchievements] = await Promise.all([
+        SupabaseService.getProfile(user.id),
+        SupabaseService.getUserStats(user.id),
+        SupabaseService.getUserAchievements(user.id),
+        SupabaseService.getAllAchievements(),
+      ]);
+
+      setUserProfile(profile);
+      setUserStats(stats);
+      
+      // Map achievements with user progress
+      const mappedAchievements = allAchievements.map(achievement => {
+        const userAchievement = userAchievements.find(ua => ua.achievement_id === achievement.id);
+        return {
+          ...achievement,
+          unlocked: userAchievement?.completed || false,
+          progress: userAchievement?.progress || 0,
+          maxProgress: achievement.required_value,
+        };
+      });
+      
+      setAchievements(mappedAchievements);
+      
+      if (stats) {
+        // Animate XP counter
+        xpCounterValue.value = withTiming(stats.total_xp, { duration: 2000 });
+        
+        // Animate level progress
+        const currentLevelXP = (stats.current_level - 1) * 1000;
+        const nextLevelXP = stats.current_level * 1000;
+        const progress = ((stats.total_xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
+        levelProgress.value = withTiming(Math.min(progress, 100), { duration: 1500, delay: 500 });
+      }
+    } catch (error) {
+      console.error('Error loading profile data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -133,9 +192,56 @@ export default function Profile() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => router.replace('/auth') },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await SupabaseService.signOut();
+              router.replace('/auth');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              router.replace('/auth');
+            }
+          }
+        },
       ]
     );
+  };
+
+  const handleShareProfile = async () => {
+    if (!userStats || !userProfile) return;
+    
+    const shareText = `🚀 Check out my MindGains AI progress!
+
+📊 Level ${userStats.current_level} • ${userStats.total_xp.toLocaleString()} XP
+🔥 ${userStats.streak_days} day streak
+🏆 ${userStats.missions_completed} missions completed
+📚 ${Math.round(userStats.total_study_time / 60)} hours studied
+
+Join India's #1 AI learning platform:
+📱 Download: https://mindgains.ai
+
+#MindGainsAI #CompetitiveExams #StudyProgress`;
+
+    try {
+      await Share.share({
+        message: shareText,
+        title: 'My MindGains AI Progress',
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const getLeague = (xp: number) => {
+    if (xp >= 50000) return { name: 'Diamond', color: theme.colors.league.diamond, icon: 'gem' };
+    if (xp >= 25000) return { name: 'Emerald', color: theme.colors.league.emerald, icon: 'certificate' };
+    if (xp >= 15000) return { name: 'Sapphire', color: theme.colors.league.sapphire, icon: 'award' };
+    if (xp >= 8000) return { name: 'Ruby', color: theme.colors.league.ruby, icon: 'medal' };
+    if (xp >= 4000) return { name: 'Gold', color: theme.colors.league.gold, icon: 'trophy' };
+    if (xp >= 2000) return { name: 'Silver', color: theme.colors.league.silver, icon: 'star' };
+    return { name: 'Bronze', color: theme.colors.league.bronze, icon: 'shield-alt' };
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -143,565 +249,962 @@ export default function Profile() {
     transform: [{ translateY: interpolate(fadeIn.value, [0, 1], [30, 0]) }],
   }));
 
-  const StatCard = ({ icon: Icon, label, value, color }: {
-    icon: any;
-    label: string;
-    value: string | number;
-    color: string;
-  }) => (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-        <Icon size={24} color={color} />
-      </View>
-      <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
-        {value}
-      </Text>
-      <Text style={[styles.statLabel, { color: theme.colors.text.secondary }]}>
-        {label}
-      </Text>
-    </View>
-  );
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: headerScale.value }],
+  }));
 
-  const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
-    const IconComponent = achievement.icon;
+  const statsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: statsOpacity.value,
+    transform: [{ translateY: interpolate(statsOpacity.value, [0, 1], [20, 0]) }],
+  }));
+
+  const achievementsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: achievementsOpacity.value,
+    transform: [{ translateY: interpolate(achievementsOpacity.value, [0, 1], [30, 0]) }],
+  }));
+
+  const mascotAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: mascotScale.value }],
+  }));
+
+  const xpAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(1, { duration: 500 }),
+  }));
+
+  const levelProgressAnimatedStyle = useAnimatedStyle(() => ({
+    width: `${levelProgress.value}%`,
+  }));
+
+  const shimmerAnimatedStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(
+      shimmerPosition.value,
+      [-1, 1],
+      [-width * 1.5, width * 1.5]
+    );
     
+    return {
+      transform: [{ translateX }],
+    };
+  });
+
+  if (isLoading) {
     return (
-      <View style={[
-        styles.achievementCard,
-        !achievement.unlocked && styles.lockedAchievement
-      ]}>
-        <View style={[styles.achievementIcon, {
-          backgroundColor: achievement.unlocked ? theme.colors.primary + '20' : theme.colors.text.quaternary + '20'
-        }]}>
-          <IconComponent 
-            size={24} 
-            color={achievement.unlocked ? theme.colors.primary : theme.colors.text.quaternary} 
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <View style={styles.loadingContainer}>
+          <MascotAvatar size={80} animated={true} glowing={true} mood="focused" />
+          <Text style={styles.loadingText}>Loading your profile...</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (!userProfile || !userStats) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Profile not found</Text>
+          <GradientButton
+            title="Go Back"
+            onPress={() => router.back()}
+            size="medium"
           />
         </View>
-        
-        <View style={styles.achievementContent}>
-          <Text style={[styles.achievementTitle, { 
-            color: achievement.unlocked ? theme.colors.text.primary : theme.colors.text.tertiary,
-            opacity: achievement.unlocked ? 1 : 0.6 
-          }]}>
-            {achievement.title}
-          </Text>
-          <Text style={[styles.achievementDescription, { 
-            color: theme.colors.text.secondary,
-            opacity: achievement.unlocked ? 1 : 0.6 
-          }]}>
-            {achievement.description}
-          </Text>
-          
-          {!achievement.unlocked && achievement.progress && achievement.maxProgress && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { 
-                  width: `${(achievement.progress / achievement.maxProgress) * 100}%`,
-                  backgroundColor: theme.colors.primary 
-                }]} />
-              </View>
-              <Text style={styles.progressText}>
-                {achievement.progress}/{achievement.maxProgress}
+      </LinearGradient>
+    );
+  }
+
+  const league = getLeague(userStats.total_xp);
+  const currentLevelXP = (userStats.current_level - 1) * 1000;
+  const nextLevelXP = userStats.current_level * 1000;
+  const xpToNextLevel = nextLevelXP - userStats.total_xp;
+
+  return (
+    <LinearGradient
+      colors={[
+        theme.colors.background.primary,
+        theme.colors.background.secondary,
+        theme.colors.background.tertiary,
+      ]}
+      style={styles.container}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      <SafeAreaView style={styles.safeArea}>
+        {/* Enhanced Header */}
+        <View style={styles.header}>
+          <LinearGradient
+            colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+            style={styles.headerIcon}
+          >
+            <FontAwesome5 name="user-circle" size={24} color={theme.colors.text.primary} solid />
+          </LinearGradient>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <Text style={styles.headerSubtitle}>Your learning journey</Text>
+          </View>
+          <TouchableOpacity style={styles.shareButton} onPress={handleShareProfile}>
+            <LinearGradient
+              colors={[theme.colors.background.card, theme.colors.background.secondary]}
+              style={styles.shareButtonGradient}
+            >
+              <FontAwesome5 name="share-alt" size={16} color={theme.colors.accent.cyan} solid />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        <Animated.View style={[styles.content, animatedStyle]}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Enhanced Profile Card */}
+            <Animated.View style={[styles.profileSection, headerAnimatedStyle]}>
+              <LinearGradient
+                colors={[theme.colors.background.card, theme.colors.background.secondary]}
+                style={styles.profileCard}
+              >
+                {/* Shimmer effect */}
+                <View style={styles.shimmerContainer}>
+                  <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
+                    <LinearGradient
+                      colors={['transparent', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)', 'transparent']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.shimmerGradient}
+                    />
+                  </Animated.View>
+                </View>
+                
+                <View style={styles.profileHeader}>
+                  {/* Avatar with Mascot */}
+                  <View style={styles.avatarSection}>
+                    <LinearGradient
+                      colors={[league.color, league.color + '80']}
+                      style={styles.profileAvatar}
+                    >
+                      <Text style={styles.profileAvatarText}>
+                        {userProfile.full_name.charAt(0)}
+                      </Text>
+                      
+                      {/* League badge */}
+                      <View style={[styles.leagueBadge, { backgroundColor: league.color }]}>
+                        <FontAwesome5 name={league.icon} size={12} color={theme.colors.text.primary} solid />
+                      </View>
+                    </LinearGradient>
+                    
+                    {/* Mascot companion */}
+                    <Animated.View style={[styles.mascotCompanion, mascotAnimatedStyle]}>
+                      <MascotAvatar size={40} animated={true} mood="happy" />
+                    </Animated.View>
+                  </View>
+                  
+                  {/* User Info */}
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.profileName}>{userProfile.full_name}</Text>
+                    <Text style={styles.profileEmail}>{userProfile.email}</Text>
+                    <Text style={styles.profileBio}>{userProfile.bio}</Text>
+                    
+                    {/* League and Rank */}
+                    <View style={styles.profileBadges}>
+                      <LinearGradient
+                        colors={[league.color + '30', league.color + '20']}
+                        style={styles.leagueCard}
+                      >
+                        <FontAwesome5 name={league.icon} size={16} color={league.color} solid />
+                        <Text style={[styles.leagueText, { color: league.color }]}>
+                          {league.name} League
+                        </Text>
+                      </LinearGradient>
+                      
+                      <View style={styles.rankCard}>
+                        <FontAwesome5 name="chart-line" size={14} color={theme.colors.accent.green} solid />
+                        <Text style={styles.rankText}>{userStats.rank}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Enhanced XP Progress */}
+                <View style={styles.xpSection}>
+                  <View style={styles.xpHeader}>
+                    <View style={styles.levelInfo}>
+                      <FontAwesome5 name="layer-group" size={16} color={theme.colors.accent.purple} solid />
+                      <Text style={styles.levelText}>Level {userStats.current_level}</Text>
+                    </View>
+                    <Animated.View style={xpAnimatedStyle}>
+                      <Text style={styles.xpText}>
+                        {userStats.total_xp.toLocaleString()} XP
+                      </Text>
+                    </Animated.View>
+                  </View>
+                  
+                  <View style={styles.progressContainer}>
+                    <View style={styles.progressBar}>
+                      <Animated.View style={[styles.progressFill, levelProgressAnimatedStyle]} />
+                    </View>
+                    <Text style={styles.progressText}>
+                      {xpToNextLevel.toLocaleString()} XP to Level {userStats.current_level + 1}
+                    </Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Enhanced Stats Grid */}
+            <Animated.View style={[styles.statsSection, statsAnimatedStyle]}>
+              <Text style={styles.sectionTitle}>
+                <FontAwesome5 name="chart-bar" size={18} color={theme.colors.accent.blue} solid />
+                {' '}Your Progress
               </Text>
+              
+              <View style={styles.statsGrid}>
+                <StatCard
+                  icon="fire"
+                  label="Streak"
+                  value={`${userStats.streak_days} days`}
+                  color={theme.colors.accent.yellow}
+                  iconType="solid"
+                />
+                <StatCard
+                  icon="bullseye"
+                  label="Missions"
+                  value={userStats.missions_completed.toString()}
+                  color={theme.colors.accent.green}
+                  iconType="solid"
+                />
+                <StatCard
+                  icon="clock"
+                  label="Study Time"
+                  value={`${Math.round(userStats.total_study_time / 60)}h`}
+                  color={theme.colors.accent.cyan}
+                  iconType="solid"
+                />
+                <StatCard
+                  icon="graduation-cap"
+                  label="Achievements"
+                  value={achievements.filter(a => a.unlocked).length.toString()}
+                  color={theme.colors.accent.pink}
+                  iconType="solid"
+                />
+              </View>
+            </Animated.View>
+
+            {/* Enhanced Achievements */}
+            <Animated.View style={[styles.achievementsSection, achievementsAnimatedStyle]}>
+              <View style={styles.achievementsHeader}>
+                <Text style={styles.sectionTitle}>
+                  <FontAwesome5 name="trophy" size={18} color={theme.colors.accent.gold} solid />
+                  {' '}Achievements
+                </Text>
+                <Text style={styles.achievementsCount}>
+                  {achievements.filter(a => a.unlocked).length}/{achievements.length}
+                </Text>
+              </View>
+              
+              <View style={styles.achievementsGrid}>
+                {achievements.map((achievement, index) => (
+                  <AchievementCard
+                    key={achievement.id}
+                    achievement={achievement}
+                    index={index}
+                  />
+                ))}
+              </View>
+            </Animated.View>
+
+            {/* Enhanced Settings */}
+            <View style={styles.settingsSection}>
+              <Text style={styles.sectionTitle}>
+                <FontAwesome5 name="cog" size={18} color={theme.colors.accent.purple} solid />
+                {' '}Settings & Actions
+              </Text>
+              
+              <View style={styles.settingsCard}>
+                <SettingItem
+                  icon="bell"
+                  title="Push Notifications"
+                  description="Get notified about your learning progress"
+                  type="toggle"
+                  value={notifications}
+                  onToggle={setNotifications}
+                  color={theme.colors.accent.blue}
+                />
+                
+                <SettingItem
+                  icon="question-circle"
+                  title="Help & Support"
+                  description="Get help with the app"
+                  type="navigation"
+                  color={theme.colors.accent.green}
+                />
+                
+                <SettingItem
+                  icon="share-alt"
+                  title="Share App"
+                  description="Invite friends to join"
+                  type="action"
+                  onPress={handleShareProfile}
+                  color={theme.colors.accent.cyan}
+                />
+                
+                <SettingItem
+                  icon="crown"
+                  title="Upgrade to Premium"
+                  description="Unlock unlimited features"
+                  type="navigation"
+                  onPress={() => router.push('/subscription')}
+                  color={theme.colors.accent.gold}
+                />
+                
+                <SettingItem
+                  icon="sign-out-alt"
+                  title="Sign Out"
+                  description="Sign out of your account"
+                  type="action"
+                  onPress={handleSignOut}
+                  color={theme.colors.accent.pink}
+                  isDestructive
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </SafeAreaView>
+    </LinearGradient>
+  );
+}
+
+function StatCard({ icon, label, value, color, iconType = 'solid' }: {
+  icon: string;
+  label: string;
+  value: string;
+  color: string;
+  iconType?: 'solid' | 'regular';
+}) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 600 });
+    scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.statCard, animatedStyle]}>
+      <LinearGradient
+        colors={[color + '20', color + '10']}
+        style={styles.statCardGradient}
+      >
+        <View style={[styles.statIcon, { backgroundColor: color + '30' }]}>
+          <FontAwesome5 name={icon} size={20} color={color} solid={iconType === 'solid'} />
+        </View>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+function AchievementCard({ achievement, index }: {
+  achievement: Achievement;
+  index: number;
+}) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    setTimeout(() => {
+      opacity.value = withTiming(1, { duration: 400 });
+      scale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    }, index * 100);
+  }, [index]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.achievementCard, animatedStyle]}>
+      <LinearGradient
+        colors={
+          achievement.unlocked
+            ? [achievement.badge_color + '30', achievement.badge_color + '20']
+            : [theme.colors.background.tertiary, theme.colors.background.secondary]
+        }
+        style={styles.achievementCardGradient}
+      >
+        <View style={[
+          styles.achievementIcon,
+          { backgroundColor: achievement.unlocked ? achievement.badge_color + '40' : theme.colors.background.tertiary }
+        ]}>
+          <Text style={styles.achievementIconText}>{achievement.icon}</Text>
+          {achievement.unlocked && (
+            <View style={styles.achievementCheck}>
+              <FontAwesome5 name="check" size={8} color={theme.colors.text.primary} solid />
             </View>
           )}
         </View>
         
-        {achievement.unlocked && (
-          <View style={styles.achievementBadge}>
-            <Award size={16} color={theme.colors.primary} />
+        <Text style={[
+          styles.achievementTitle,
+          { color: achievement.unlocked ? theme.colors.text.primary : theme.colors.text.tertiary }
+        ]}>
+          {achievement.name}
+        </Text>
+        
+        <Text style={styles.achievementDescription} numberOfLines={2}>
+          {achievement.description}
+        </Text>
+        
+        {!achievement.unlocked && achievement.progress !== undefined && achievement.maxProgress && (
+          <View style={styles.achievementProgress}>
+            <View style={styles.achievementProgressBar}>
+              <LinearGradient
+                colors={[achievement.badge_color, achievement.badge_color + '80']}
+                style={[
+                  styles.achievementProgressFill,
+                  { width: `${(achievement.progress / achievement.maxProgress) * 100}%` }
+                ]}
+              />
+            </View>
+            <Text style={styles.achievementProgressText}>
+              {achievement.progress}/{achievement.maxProgress}
+            </Text>
           </View>
         )}
-      </View>
-    );
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+
+function SettingItem({ icon, title, description, type, value, onToggle, onPress, color, isDestructive = false }: {
+  icon: string;
+  title: string;
+  description?: string;
+  type: 'toggle' | 'navigation' | 'action';
+  value?: boolean;
+  onToggle?: (value: boolean) => void;
+  onPress?: () => void;
+  color: string;
+  isDestructive?: boolean;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePress = () => {
+    if (type !== 'toggle') {
+      scale.value = withSequence(
+        withTiming(0.98, { duration: 100 }),
+        withSpring(1, { damping: 15, stiffness: 120 })
+      );
+    }
+    onPress?.();
   };
 
-  const settingsItems = [
-    {
-      id: 'notifications',
-      title: 'Push Notifications',
-      description: 'Get notified about your learning progress',
-      icon: Bell,
-      type: 'toggle' as const,
-      value: notifications,
-      onToggle: setNotifications,
-    },
-    {
-      id: 'darkMode',
-      title: 'Dark Mode',
-      description: 'Switch to dark theme',
-      icon: Settings,
-      type: 'toggle' as const,
-      value: darkMode,
-      onToggle: setDarkMode,
-    },
-    {
-      id: 'help',
-      title: 'Help & Support',
-      icon: HelpCircle,
-      type: 'navigation' as const,
-    },
-    {
-      id: 'share',
-      title: 'Share App',
-      icon: Share2,
-      type: 'action' as const,
-    },
-    {
-      id: 'logout',
-      title: 'Sign Out',
-      icon: LogOut,
-      type: 'action' as const,
-      onPress: handleSignOut,
-    },
-  ];
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" backgroundColor={theme.colors.background.primary} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <User size={24} color={theme.colors.primary} />
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-            Profile
-          </Text>
+    <Animated.View style={[styles.settingItem, animatedStyle]}>
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={type === 'toggle'}
+        activeOpacity={type === 'toggle' ? 1 : 0.8}
+        style={styles.settingButton}
+      >
+        <View style={styles.settingContent}>
+          <View style={[
+            styles.settingIcon,
+            { backgroundColor: isDestructive ? theme.colors.accent.pink + '20' : color + '20' }
+          ]}>
+            <FontAwesome5 
+              name={icon} 
+              size={18} 
+              color={isDestructive ? theme.colors.accent.pink : color} 
+              solid 
+            />
+          </View>
+          
+          <View style={styles.settingText}>
+            <Text style={[
+              styles.settingTitle,
+              { color: isDestructive ? theme.colors.accent.pink : theme.colors.text.primary }
+            ]}>
+              {title}
+            </Text>
+            {description && (
+              <Text style={styles.settingDescription}>{description}</Text>
+            )}
+          </View>
+
+          {type === 'toggle' && (
+            <Switch
+              value={value}
+              onValueChange={onToggle}
+              trackColor={{
+                false: theme.colors.border.primary,
+                true: color + '40',
+              }}
+              thumbColor={value ? color : theme.colors.text.muted}
+            />
+          )}
+
+          {type === 'navigation' && (
+            <FontAwesome5 name="chevron-right" size={16} color={theme.colors.text.tertiary} />
+          )}
         </View>
-        <TouchableOpacity style={styles.editButton}>
-          <Edit3 size={20} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <Animated.View style={[styles.content, animatedStyle]}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Profile Card */}
-          <View style={styles.section}>
-            <View style={styles.profileCard}>
-              <View style={styles.profileHeader}>
-                <View style={[styles.profileAvatar, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.profileAvatarText}>
-                    {userProfile.full_name.charAt(0)}
-                  </Text>
-                </View>
-                
-                <View style={styles.profileInfo}>
-                  <Text style={[styles.profileName, { color: theme.colors.text.primary }]}>
-                    {userProfile.full_name}
-                  </Text>
-                  <Text style={[styles.profileEmail, { color: theme.colors.text.secondary }]}>
-                    {userProfile.email}
-                  </Text>
-                  <Text style={[styles.profileBio, { color: theme.colors.text.tertiary }]}>
-                    {userProfile.bio}
-                  </Text>
-                  
-                  <View style={styles.rankContainer}>
-                    <LinearGradient
-                      colors={[theme.colors.primary, theme.colors.info]}
-                      style={styles.rankBadge}
-                    >
-                      <Crown size={16} color="#ffffff" />
-                      <Text style={styles.rankText}>{userStats.rank}</Text>
-                    </LinearGradient>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Stats Grid */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-              Your Progress
-            </Text>
-            
-            <View style={styles.statsGrid}>
-              <StatCard 
-                icon={Trophy} 
-                label="Level" 
-                value={userStats.current_level} 
-                color={theme.colors.primary}
-              />
-              <StatCard 
-                icon={Zap} 
-                label="Streak" 
-                value={`${userStats.streak_days}d`} 
-                color={theme.colors.warning}
-              />
-              <StatCard 
-                icon={Star} 
-                label="XP" 
-                value={userStats.total_xp.toLocaleString()} 
-                color={theme.colors.success}
-              />
-              <StatCard 
-                icon={Target} 
-                label="Accuracy" 
-                value={`${userStats.accuracy}%`} 
-                color={theme.colors.info}
-              />
-            </View>
-          </View>
-
-          {/* Achievements */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-              Achievements
-            </Text>
-            
-            <View style={styles.achievementsContainer}>
-              {achievements.map((achievement) => (
-                <AchievementCard key={achievement.id} achievement={achievement} />
-              ))}
-            </View>
-          </View>
-
-          {/* Settings */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-              Settings
-            </Text>
-            
-            <View style={styles.settingsCard}>
-              {settingsItems.map((item, index) => (
-                <View key={item.id} style={[
-                  styles.settingItem,
-                  index === settingsItems.length - 1 && styles.lastSettingItem
-                ]}>
-                  <TouchableOpacity 
-                    style={styles.settingButton}
-                    onPress={item.type === 'action' ? item.onPress : undefined}
-                    activeOpacity={item.type !== 'toggle' ? 0.7 : 1}
-                  >
-                    <View style={styles.settingContent}>
-                      <View style={[styles.settingIcon, { 
-                        backgroundColor: item.id === 'logout' 
-                          ? theme.colors.error + '20' 
-                          : theme.colors.primary + '20' 
-                      }]}>
-                        <item.icon size={20} color={
-                          item.id === 'logout' 
-                            ? theme.colors.error 
-                            : theme.colors.primary
-                        } />
-                      </View>
-                      
-                      <View style={styles.settingText}>
-                        <Text style={[styles.settingTitle, { 
-                          color: item.id === 'logout' 
-                            ? theme.colors.error 
-                            : theme.colors.text.primary 
-                        }]}>
-                          {item.title}
-                        </Text>
-                        {item.description && (
-                          <Text style={[styles.settingDescription, { color: theme.colors.text.secondary }]}>
-                            {item.description}
-                          </Text>
-                        )}
-                      </View>
-
-                      {item.type === 'toggle' && (
-                        <Switch
-                          value={item.value}
-                          onValueChange={item.onToggle}
-                          trackColor={{
-                            false: theme.colors.border.primary,
-                            true: theme.colors.primary + '40',
-                          }}
-                          thumbColor={item.value ? theme.colors.primary : theme.colors.text.quaternary}
-                        />
-                      )}
-
-                      {item.type === 'navigation' && (
-                        <ChevronRight size={20} color={theme.colors.text.tertiary} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-      </Animated.View>
-    </SafeAreaView>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.primary,
   },
-  
+  safeArea: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  errorText: {
+    fontSize: 18,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
   },
-  
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  
-  editButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + '20',
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    ...theme.shadows.glow,
   },
-  
+  headerText: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+  },
+  shareButton: {
+    borderRadius: theme.borderRadius.full,
+    overflow: 'hidden',
+  },
+  shareButtonGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+  },
   content: {
     flex: 1,
   },
-  
-  section: {
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  profileSection: {
     paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
   },
-  
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: theme.spacing.lg,
-  },
-  
   profileCard: {
-    backgroundColor: theme.colors.background.secondary,
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
     ...theme.shadows.card,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  
+  shimmerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    width: width * 2,
+    height: 200,
+    opacity: 0.3,
+  },
+  shimmerGradient: {
+    flex: 1,
+  },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: theme.spacing.xl,
   },
-  
+  avatarSection: {
+    alignItems: 'center',
+    marginRight: theme.spacing.lg,
+    position: 'relative',
+  },
   profileAvatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.lg,
-    ...theme.shadows.small,
+    ...theme.shadows.card,
+    position: 'relative',
   },
-  
   profileAvatarText: {
-    color: '#ffffff',
+    color: theme.colors.text.primary,
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: theme.fonts.heading,
   },
-  
+  leagueBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.background.card,
+  },
+  mascotCompanion: {
+    position: 'absolute',
+    bottom: -10,
+    right: -10,
+  },
   profileInfo: {
     flex: 1,
   },
-  
   profileName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
     marginBottom: theme.spacing.xs,
   },
-  
   profileEmail: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
     marginBottom: theme.spacing.sm,
   },
-  
   profileBio: {
     fontSize: 14,
-    marginBottom: theme.spacing.lg,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.tertiary,
     lineHeight: 20,
+    marginBottom: theme.spacing.md,
   },
-  
-  rankContainer: {
-    alignSelf: 'flex-start',
-  },
-  
-  rankBadge: {
+  profileBadges: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
     gap: theme.spacing.sm,
   },
-  
-  rankText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+  leagueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    gap: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  
+  leagueText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    fontWeight: 'bold',
+  },
+  rankCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.tertiary,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    gap: theme.spacing.xs,
+  },
+  rankText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.accent.green,
+  },
+  xpSection: {
+    gap: theme.spacing.md,
+  },
+  xpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  levelInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  levelText: {
+    fontSize: 18,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
+  xpText: {
+    fontSize: 24,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.accent.yellow,
+  },
+  progressContainer: {
+    gap: theme.spacing.sm,
+  },
+  progressBar: {
+    height: 12,
+    backgroundColor: theme.colors.background.tertiary,
+    borderRadius: theme.borderRadius.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.accent.purple,
+    borderRadius: theme.borderRadius.sm,
+  },
+  progressText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+  },
+  statsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.lg,
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.md,
   },
-  
   statCard: {
-    flex: 1,
-    minWidth: 150,
-    backgroundColor: theme.colors.background.secondary,
+    width: '47%',
     borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  statCardGradient: {
     padding: theme.spacing.lg,
     alignItems: 'center',
-    ...theme.shadows.small,
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+    borderRadius: theme.borderRadius.lg,
   },
-  
   statIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
     marginBottom: theme.spacing.xs,
   },
-  
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
   },
-  
-  achievementsContainer: {
+  achievementsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  achievementsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  achievementsCount: {
+    fontSize: 14,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.accent.gold,
+    backgroundColor: theme.colors.accent.gold + '20',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
+  },
+  achievementsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.spacing.md,
   },
-  
   achievementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
+    width: '47%',
     borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    ...theme.shadows.small,
+    overflow: 'hidden',
   },
-  
-  lockedAchievement: {
-    opacity: 0.7,
+  achievementCardGradient: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+    borderRadius: theme.borderRadius.lg,
+    minHeight: 140,
   },
-  
   achievementIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    position: 'relative',
   },
-  
-  achievementContent: {
-    flex: 1,
+  achievementIconText: {
+    fontSize: 24,
   },
-  
+  achievementCheck: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent.green,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   achievementTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: theme.fonts.subheading,
+    textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
-  
   achievementDescription: {
-    fontSize: 14,
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 16,
     marginBottom: theme.spacing.sm,
   },
-  
-  progressContainer: {
-    marginTop: theme.spacing.sm,
+  achievementProgress: {
+    width: '100%',
+    gap: theme.spacing.xs,
   },
-  
-  progressBar: {
+  achievementProgressBar: {
     height: 4,
-    backgroundColor: theme.colors.border.primary,
+    backgroundColor: theme.colors.background.tertiary,
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: theme.spacing.xs,
   },
-  
-  progressFill: {
+  achievementProgressFill: {
     height: '100%',
     borderRadius: 2,
   },
-  
-  progressText: {
-    fontSize: 12,
+  achievementProgressText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.caption,
     color: theme.colors.text.tertiary,
+    textAlign: 'center',
   },
-  
-  achievementBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.primary + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: theme.spacing.sm,
+  settingsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
-  
   settingsCard: {
-    backgroundColor: theme.colors.background.secondary,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.background.card,
+    borderRadius: theme.borderRadius.xl,
     overflow: 'hidden',
-    ...theme.shadows.small,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+    ...theme.shadows.card,
   },
-  
   settingItem: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.light,
+    borderBottomColor: theme.colors.border.tertiary,
   },
-  
-  lastSettingItem: {
-    borderBottomWidth: 0,
-  },
-  
   settingButton: {
     padding: theme.spacing.lg,
   },
-  
   settingContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.md,
   },
-  
   settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
   },
-  
   settingText: {
     flex: 1,
   },
-  
   settingTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: theme.spacing.xs / 2,
+    fontFamily: theme.fonts.subheading,
+    marginBottom: 2,
   },
-  
   settingDescription: {
     fontSize: 14,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
   },
 });

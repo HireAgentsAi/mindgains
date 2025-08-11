@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
-import { Home, BookOpen, Award, User } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -12,17 +12,17 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background.primary,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border.primary,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 70,
+          paddingBottom: 12,
+          paddingTop: 12,
           ...theme.shadows.card,
         },
         tabBarActiveTintColor: theme.colors.accent.purple,
         tabBarInactiveTintColor: theme.colors.text.tertiary,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          fontSize: 10,
+          fontFamily: theme.fonts.caption,
           marginTop: 2,
         },
         tabBarIconStyle: {
@@ -35,10 +35,11 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Home
-              size={focused ? 26 : 24}
+            <FontAwesome5
+              name="home"
+              size={focused ? 22 : 20}
               color={color}
-              fill={focused ? color : 'none'}
+              solid={focused}
             />
           ),
         }}
@@ -48,10 +49,11 @@ export default function TabLayout() {
         options={{
           title: 'Learn',
           tabBarIcon: ({ color, focused }) => (
-            <BookOpen
-              size={focused ? 26 : 24}
+            <FontAwesome5
+              name="graduation-cap"
+              size={focused ? 22 : 20}
               color={color}
-              fill={focused ? color : 'none'}
+              solid={focused}
             />
           ),
         }}
@@ -61,10 +63,11 @@ export default function TabLayout() {
         options={{
           title: 'Leaderboard',
           tabBarIcon: ({ color, focused }) => (
-            <Award
-              size={focused ? 26 : 24}
+            <FontAwesome5
+              name="trophy"
+              size={focused ? 22 : 20}
               color={color}
-              fill={focused ? color : 'none'}
+              solid={focused}
             />
           ),
         }}
@@ -74,10 +77,11 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <User
-              size={focused ? 26 : 24}
+            <FontAwesome5
+              name="user-circle"
+              size={focused ? 22 : 20}
               color={color}
-              fill={focused ? color : 'none'}
+              solid={focused}
             />
           ),
         }}
@@ -85,7 +89,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  // Clean, minimal styles only
-});
