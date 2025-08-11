@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '../utils/supabaseService';
+import { supabase } from '@/utils/supabaseService';
 
 const { width } = Dimensions.get('window');
 
