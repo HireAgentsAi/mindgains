@@ -83,29 +83,35 @@ export default function TopicQuizScreen() {
   const loadTopicQuestions = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if user can take quiz
+      
+      // Check authentication first
       const user = await SupabaseService.getCurrentUser();
-      if (user) {
-        const limits = await SupabaseService.checkUserLimits(user.id);
-        if (!limits.canTakeQuiz) {
-          if (!isMounted.current) return;
-          Alert.alert(
-            'Daily Limit Reached',
-            `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
-            [
-              { text: 'Maybe Later', onPress: () => router.back() },
-              { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
-            ]
-          );
-          return;
-        }
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
       }
 
-      // Try to get existing questions first
+      // Check if user can take quiz
+      const limits = await SupabaseService.checkUserLimits(user.id);
+      if (!limits.canTakeQuiz) {
+        if (!isMounted.current) return;
+        Alert.alert(
+          'Daily Limit Reached',
+          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
+          [
+            { text: 'Maybe Later', onPress: () => router.back() },
+            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
+          ]
+        );
+        return;
+      }
+
+      // Get existing questions or generate new ones
       let topicQuestions = await SupabaseService.getTopicQuestions(topicId as string);
       
       if (!topicQuestions || topicQuestions.length === 0) {
-        // No questions available, generate them using AI
+        // Generate questions using AI
         setIsLoading(true);
         
         const result = await SupabaseService.generateTopicQuiz(
@@ -117,7 +123,6 @@ export default function TopicQuizScreen() {
         
         if (result.success && result.questions) {
           if (!isMounted.current) return;
-          // Convert AI questions to TopicQuestion format
           const aiQuestions = result.questions.map((q: any, index: number) => ({
             id: `ai_${index}`,
             question: q.question,
@@ -136,17 +141,17 @@ export default function TopicQuizScreen() {
         }
       } else {
         if (!isMounted.current) return;
-        // Use existing questions, randomly select 10
+        // Use existing questions, randomly select 15
         const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
-        const selectedQuestions = shuffled.slice(0, 10);
+        const selectedQuestions = shuffled.slice(0, 15);
         
         setQuestions(selectedQuestions);
         setUserAnswers(new Array(selectedQuestions.length).fill(-1));
       }
     } catch (error) {
       console.error('Error loading topic questions:', error);
-      Alert.alert('Error', 'Failed to load or generate quiz questions. Please try again.');
       if (!isMounted.current) return;
+      Alert.alert('Error', 'Failed to load quiz questions. Please try again.');
       router.back();
     } finally {
       if (!isMounted.current) return;

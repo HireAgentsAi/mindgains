@@ -127,26 +127,6 @@ export default function Home() {
   const loadUserData = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        if (!isMounted.current) return;
-        // Use demo data
-        setUserStats({
-          currentLevel: demoUserStats.current_level,
-          totalXP: demoUserStats.total_xp,
-          streakDays: demoUserStats.streak_days,
-          totalQuizzes: 87,
-          accuracy: 85,
-          rank: 234,
-        });
-        
-        setMascotRecommendations([
-          "Ready to conquer today's quiz? 🚀",
-          "Your streak is on fire! Keep it going! 🔥",
-          "Time to level up your knowledge! 📚"
-        ]);
-        return;
-      }
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
@@ -167,15 +147,17 @@ export default function Home() {
           currentLevel: stats.current_level,
           totalXP: stats.total_xp,
           streakDays: stats.streak_days,
-          totalQuizzes: 87, // This would come from quiz attempts count
-          accuracy: 85, // This would be calculated from quiz results
-          rank: 234, // This would come from leaderboard position
+          totalQuizzes: 0, // Will be calculated from real data
+          accuracy: 0, // Will be calculated from real data
+          rank: 0, // Will be calculated from real data
         });
       }
       
       setMascotRecommendations(recommendations);
     } catch (error) {
       console.error('Error loading user data:', error);
+      if (!isMounted.current) return;
+      router.replace('/auth');
     } finally {
       if (!isMounted.current) return;
     }

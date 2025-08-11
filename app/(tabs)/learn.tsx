@@ -82,64 +82,41 @@ export default function Learn() {
   const loadSubjects = async () => {
     try {
       if (!isMounted.current) return;
-      // Mock data - in real app, load from Supabase
-      const mockSubjects: Subject[] = [
-        {
-          id: '1',
-          name: 'Mathematics',
-          icon: Target,
-          color: theme.colors.accent.purple,
-          progress: 75,
-          totalTopics: 45,
-          completedTopics: 34,
-          difficulty: 'intermediate',
-        },
-        {
-          id: '2',
-          name: 'Physics',
-          icon: Brain,
-          color: theme.colors.accent.green,
-          progress: 60,
-          totalTopics: 38,
-          completedTopics: 23,
-          difficulty: 'advanced',
-        },
-        {
-          id: '3',
-          name: 'Chemistry',
-          icon: Trophy,
-          color: theme.colors.accent.yellow,
-          progress: 45,
-          totalTopics: 42,
-          completedTopics: 19,
-          difficulty: 'intermediate',
-        },
-        {
-          id: '4',
-          name: 'English',
-          icon: BookOpen,
-          color: theme.colors.accent.blue,
-          progress: 85,
-          totalTopics: 30,
-          completedTopics: 26,
-          difficulty: 'beginner',
-        },
-        {
-          id: '5',
-          name: 'General Knowledge',
-          icon: Star,
-          color: theme.colors.accent.pink,
-          progress: 30,
-          totalTopics: 50,
-          completedTopics: 15,
-          difficulty: 'expert',
-        },
-      ];
+      
+      // Check authentication
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
+
+      // Load real subjects from database
+      const indianSubjects = await SupabaseService.getIndianSubjects();
+      
+      // Convert to Subject format with progress
+      const subjectsWithProgress = await Promise.all(
+        indianSubjects.map(async (subject) => {
+          const progress = await SupabaseService.getSubjectProgress(user.id, subject.id);
+          return {
+            id: subject.id,
+            name: subject.name,
+            icon: BookOpen, // Default icon
+            color: subject.color,
+            progress: progress.average_score,
+            totalTopics: subject.total_topics,
+            completedTopics: progress.topics_attempted,
+            difficulty: progress.proficiency_level as any,
+          };
+        })
+      );
       
       if (!isMounted.current) return;
-      setSubjects(mockSubjects);
+      setSubjects(subjectsWithProgress);
     } catch (error) {
       console.error('Error loading subjects:', error);
+      if (!isMounted.current) return;
+      setSubjects([]);
     }
   };
 

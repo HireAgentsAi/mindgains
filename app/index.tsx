@@ -104,32 +104,20 @@ export default function SplashScreen() {
       
       try {
         if (!isMounted.current) return;
-        // Check if Supabase is configured
-        if (process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-          try {
-            // Test Supabase connection with timeout
-            const user = await Promise.race([
-              SupabaseService.getCurrentUser(),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Connection timeout')), 5000)
-              )
-            ]);
-            
-            if (user) {
-              if (!isMounted.current) return;
-              setTimeout(() => {
-                if (!isMounted.current) return;
-                router.replace('/(tabs)');
-              }, 4000);
-              return;
-            }
-          } catch (supabaseError) {
-            console.log('Supabase connection failed, using demo mode:', supabaseError);
-            // Continue to auth screen even if Supabase fails
-          }
+        
+        // Check if user is already authenticated
+        const user = await SupabaseService.getCurrentUser();
+        
+        if (user) {
+          if (!isMounted.current) return;
+          setTimeout(() => {
+            if (!isMounted.current) return;
+            router.replace('/(tabs)');
+          }, 4000);
+          return;
         }
         
-        // Navigate to auth screen (works in both demo and real mode)
+        // Navigate to auth screen
         if (!isMounted.current) return;
         setTimeout(() => {
           if (!isMounted.current) return;
@@ -138,7 +126,7 @@ export default function SplashScreen() {
         
       } catch (error) {
         console.log('Navigation initialization error:', error);
-        // Always provide fallback navigation
+        // Fallback to auth screen
         if (!isMounted.current) return;
         setTimeout(() => {
           if (!isMounted.current) return;

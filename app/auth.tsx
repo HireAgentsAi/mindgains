@@ -122,32 +122,6 @@ export default function AuthScreen() {
     );
 
     try {
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // Demo authentication
-        if (isLogin) {
-          // Simulate successful login
-          setTimeout(() => {
-            if (!isMounted.current) return;
-            setLoading(false);
-            router.replace('/(tabs)');
-          }, 1500);
-        } else {
-          // Simulate successful signup
-          setTimeout(() => {
-            if (!isMounted.current) return;
-            setLoading(false);
-            setPopup({
-              visible: true,
-              title: 'Demo Account Created',
-              message: 'Welcome to MindGains AI! You can now explore all features with demo data.',
-            });
-            setIsLogin(true);
-          }, 1500);
-        }
-        return;
-      }
-      
       if (isLogin) {
         const { user, error } = await SupabaseService.signIn(email, password);
         if (error || !user) throw new Error(error?.message || 'Login failed');

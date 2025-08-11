@@ -40,54 +40,6 @@ interface SubjectTopic {
   };
 }
 
-const DEMO_TOPICS: SubjectTopic[] = [
-  {
-    id: '1',
-    name: 'Ancient India',
-    description: 'Indus Valley, Vedic Period, Mauryas, Guptas',
-    importance_level: 'high',
-    exam_frequency: 'frequent',
-    total_questions: 25,
-    user_progress: { questions_attempted: 15, best_score: 85, proficiency_level: 'advanced' }
-  },
-  {
-    id: '2',
-    name: 'Medieval India',
-    description: 'Delhi Sultanate, Mughal Empire, Regional Kingdoms',
-    importance_level: 'high',
-    exam_frequency: 'frequent',
-    total_questions: 30,
-    user_progress: { questions_attempted: 20, best_score: 78, proficiency_level: 'intermediate' }
-  },
-  {
-    id: '3',
-    name: 'Modern India',
-    description: 'British Rule, Freedom Struggle, Independence',
-    importance_level: 'high',
-    exam_frequency: 'frequent',
-    total_questions: 35,
-    user_progress: { questions_attempted: 25, best_score: 92, proficiency_level: 'expert' }
-  },
-  {
-    id: '4',
-    name: 'Art & Culture',
-    description: 'Classical Arts, Literature, Architecture',
-    importance_level: 'medium',
-    exam_frequency: 'moderate',
-    total_questions: 20,
-    user_progress: { questions_attempted: 10, best_score: 65, proficiency_level: 'beginner' }
-  },
-  {
-    id: '5',
-    name: 'Geography',
-    description: 'Physical Features, Climate, Resources',
-    importance_level: 'high',
-    exam_frequency: 'frequent',
-    total_questions: 28,
-    user_progress: { questions_attempted: 18, best_score: 88, proficiency_level: 'advanced' }
-  },
-];
-
 export default function SubjectQuizScreen() {
   const isMounted = useRef(true);
   const params = useLocalSearchParams();
@@ -121,20 +73,23 @@ export default function SubjectQuizScreen() {
   const loadSubjectTopics = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+      
+      // Check authentication
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
         if (!isMounted.current) return;
-        // Use demo topics
-        setTopics(DEMO_TOPICS);
-        setIsLoading(false);
+        router.replace('/auth');
         return;
       }
       
+      // Load real subject topics
       if (!isMounted.current) return;
       const subjectTopics = await SupabaseService.getSubjectTopics(subjectId as string);
       setTopics(subjectTopics);
     } catch (error) {
       console.error('Error loading subject topics:', error);
+      if (!isMounted.current) return;
+      setTopics([]);
     } finally {
       if (!isMounted.current) return;
       setIsLoading(false);

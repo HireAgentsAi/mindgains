@@ -118,38 +118,6 @@ export default function Profile() {
   const loadProfileData = async () => {
     try {
       if (!isMounted.current) return;
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        if (!isMounted.current) return;
-        // Use demo data
-        setUserProfile(demoUserProfile);
-        setUserStats(demoUserStats);
-        
-        // Map demo achievements
-        const mappedAchievements = demoAchievements.map(achievement => {
-          const userAchievement = demoUserAchievements.find(ua => ua.achievement_id === achievement.id);
-          return {
-            ...achievement,
-            unlocked: userAchievement?.completed || false,
-            progress: userAchievement?.progress || 0,
-            maxProgress: achievement.required_value,
-          };
-        });
-        
-        setAchievements(mappedAchievements);
-        
-        // Animate XP counter
-        xpCounterValue.value = withTiming(demoUserStats.total_xp, { duration: 2000 });
-        
-        // Animate level progress
-        const currentLevelXP = (demoUserStats.current_level - 1) * 1000;
-        const nextLevelXP = demoUserStats.current_level * 1000;
-        const progress = ((demoUserStats.total_xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-        levelProgress.value = withTiming(progress, { duration: 1500, delay: 500 });
-        
-        setIsLoading(false);
-        return;
-      }
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
@@ -195,6 +163,8 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Error loading profile data:', error);
+      if (!isMounted.current) return;
+      router.replace('/auth');
     } finally {
       if (!isMounted.current) return;
       setIsLoading(false);

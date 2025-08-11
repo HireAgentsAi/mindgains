@@ -116,13 +116,24 @@ export default function Leaderboard() {
       if (!isMounted.current) return;
       setIsLoading(true);
       
-      // Load real leaderboard data
+      // Check authentication first
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
+
+      // Load leaderboard data
       const leaderboard = await SupabaseService.getLeaderboard(currentFilter as any);
       if (!isMounted.current) return;
       setLeaderboardData(leaderboard);
       
     } catch (error) {
       console.error('Error loading leaderboard:', error);
+      if (!isMounted.current) return;
+      // Show empty leaderboard if no data available
+      setLeaderboardData([]);
     } finally {
       if (!isMounted.current) return;
       setIsLoading(false);

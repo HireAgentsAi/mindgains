@@ -106,93 +106,44 @@ export default function DailyQuizScreen() {
     try {
       if (!isMounted.current) return;
       
-      // Always try to get quiz, with fallback handling
+      // Check authentication first
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
+
+      // Check user limits
+      const limits = await SupabaseService.checkUserLimits(user.id);
+      if (!limits.canTakeQuiz) {
+        if (!isMounted.current) return;
+        Alert.alert(
+          'Daily Limit Reached',
+          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
+          [
+            { text: 'Maybe Later', onPress: () => router.back() },
+            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
+          ]
+        );
+        return;
+      }
+
+      // Get today's quiz using AI
       const dailyQuiz = await SupabaseService.ensureTodayQuiz();
       
       if (!dailyQuiz) {
-        // Final fallback if everything fails
-        const demoQuiz: DailyQuiz = {
-          id: 'demo-daily-quiz-final',
-          date: new Date().toISOString().split('T')[0],
-          questions: [
-            {
-              id: 'dq1',
-              question: 'Which Article of the Indian Constitution guarantees Right to Equality?',
-              options: ['Article 12', 'Article 14', 'Article 16', 'Article 19'],
-              correct_answer: 1,
-              explanation: 'Article 14 guarantees equality before law and equal protection of laws to all persons within the territory of India.',
-              subject: 'Polity',
-              subtopic: 'Fundamental Rights',
-              difficulty: 'medium',
-              points: 10,
-            },
-            {
-              id: 'dq2',
-              question: 'Who was the first Governor-General of independent India?',
-              options: ['Lord Mountbatten', 'C. Rajagopalachari', 'Warren Hastings', 'Lord Curzon'],
-              correct_answer: 0,
-              explanation: 'Lord Mountbatten was the first Governor-General of independent India from August 1947 to June 1948.',
-              subject: 'History',
-              subtopic: 'Modern India',
-              difficulty: 'easy',
-              points: 5,
-            },
-            {
-              id: 'dq3',
-              question: 'Which river is known as the "Sorrow of Bengal"?',
-              options: ['Ganga', 'Brahmaputra', 'Damodar', 'Hooghly'],
-              correct_answer: 2,
-              explanation: 'The Damodar River was known as the "Sorrow of Bengal" due to its frequent floods before the construction of dams.',
-              subject: 'Geography',
-              subtopic: 'Physical Geography',
-              difficulty: 'medium',
-              points: 10,
-            },
-          ],
-          total_points: 25,
-          difficulty_distribution: { easy: 1, medium: 2, hard: 0 },
-          subjects_covered: ['History', 'Polity', 'Geography'],
-          is_active: true,
-          created_at: new Date().toISOString(),
-        };
-        
-        setQuiz(demoQuiz);
-        setUserAnswers(new Array(demoQuiz.questions.length).fill(-1));
-      } else {
-        setQuiz(dailyQuiz);
-        setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
+        throw new Error('Unable to load daily quiz');
       }
+      
+      if (!isMounted.current) return;
+      setQuiz(dailyQuiz);
+      setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
     } catch (error) {
       console.error('Error loading daily quiz:', error);
-      // Don't show alert, just use demo data
       if (!isMounted.current) return;
-      
-      // Final fallback quiz
-      const errorFallbackQuiz: DailyQuiz = {
-        id: 'error-fallback-quiz',
-        date: new Date().toISOString().split('T')[0],
-        questions: [
-          {
-            id: 'dq1',
-            question: 'What is the capital of India?',
-            options: ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
-            correct_answer: 1,
-            explanation: 'New Delhi is the capital city of India.',
-            subject: 'Geography',
-            subtopic: 'Indian Geography',
-            difficulty: 'easy',
-            points: 10,
-          },
-        ],
-        total_points: 10,
-        difficulty_distribution: { easy: 1, medium: 0, hard: 0 },
-        subjects_covered: ['Geography'],
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-      
-      setQuiz(errorFallbackQuiz);
-      setUserAnswers(new Array(errorFallbackQuiz.questions.length).fill(-1));
+      Alert.alert('Error', 'Unable to load daily quiz. Please try again later.');
+      router.back();
     } finally {
       if (!isMounted.current) return;
       setIsLoading(false);
