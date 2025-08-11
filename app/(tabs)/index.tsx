@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { supabase } from '@/utils/supabaseService';
+import { SupabaseService } from '@/utils/supabaseService';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +35,7 @@ interface QuizStats {
 }
 
 export default function HomePage() {
+  const isMounted = useRef(true);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [quizStats, setQuizStats] = useState<QuizStats>({ totalQuizzes: 0, accuracy: 0 });
@@ -131,7 +132,12 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    isMounted.current = true;
     loadData();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   if (loading) {
