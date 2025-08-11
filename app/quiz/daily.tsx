@@ -514,11 +514,11 @@ export default function DailyQuizScreen() {
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>
               <FontAwesome5 name="calendar-day" size={16} color={theme.colors.accent.purple} solid />
-              {' '}Daily Quiz
+              <Text> Daily Quiz</Text>
             </Text>
             <Text style={styles.headerSubtitle}>
               <FontAwesome5 name="flag" size={12} color={theme.colors.text.secondary} />
-              {' '}India Knowledge Challenge
+              <Text> India Knowledge Challenge</Text>
             </Text>
           </View>
         </View>
