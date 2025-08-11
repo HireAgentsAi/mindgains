@@ -106,7 +106,7 @@ export default function DailyQuizScreen() {
     try {
       if (!isMounted.current) return;
       
-      console.log('📱 Loading daily quiz...');
+      console.log('📱 Loading daily quiz...', { supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL });
       
       // Check authentication first
       const user = await SupabaseService.getCurrentUser();
@@ -116,22 +116,11 @@ export default function DailyQuizScreen() {
         return;
       }
 
-      // Check user limits
-      const limits = await SupabaseService.checkUserLimits(user.id);
-      if (!limits.canTakeQuiz) {
-        if (!isMounted.current) return;
-        Alert.alert(
-          'Daily Limit Reached',
-          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
-          [
-            { text: 'Maybe Later', onPress: () => router.back() },
-            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
-          ]
-        );
-        return;
-      }
+      // Skip limits check for now to test quiz loading
+      console.log('👤 User authenticated:', user.id);
 
       // Get today's quiz (will generate if doesn't exist)
+      console.log('🔍 Calling ensureTodayQuiz...');
       const dailyQuiz = await SupabaseService.ensureTodayQuiz();
       
       if (!dailyQuiz) {
@@ -139,9 +128,14 @@ export default function DailyQuizScreen() {
       }
       
       if (!isMounted.current) return;
-      console.log('✅ Daily quiz loaded:', dailyQuiz.questions.length, 'questions');
+      console.log('✅ Daily quiz loaded:', {
+        questionsCount: dailyQuiz.questions?.length || 0,
+        firstQuestion: dailyQuiz.questions?.[0]?.question || 'No question',
+        subjects: dailyQuiz.subjects_covered || []
+      });
+      
       setQuiz(dailyQuiz);
-      setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
+      setUserAnswers(new Array(dailyQuiz.questions?.length || 0).fill(-1));
     } catch (error) {
       console.error('❌ Error loading daily quiz:', error);
       if (!isMounted.current) return;

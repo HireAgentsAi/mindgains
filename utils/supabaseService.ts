@@ -370,7 +370,7 @@ export class SupabaseService {
   static async getTodayQuiz(): Promise<DailyQuiz | null> {
     const today = new Date().toISOString().split('T')[0]
     
-    console.log('Getting today quiz for date:', today)
+    console.log('📅 Getting today quiz for date:', today)
     
     const { data, error } = await supabase
       .from('daily_quizzes')
@@ -380,11 +380,16 @@ export class SupabaseService {
       .maybeSingle()
 
     if (error) {
-      console.error('Error fetching daily quiz:', error)
+      console.error('❌ Error fetching daily quiz from database:', error)
       return null
     }
 
-    console.log('Found existing quiz:', data ? 'Yes' : 'No')
+    console.log('📊 Database query result:', {
+      found: data ? 'Yes' : 'No',
+      questionsCount: data?.questions?.length || 0,
+      date: data?.date || 'N/A'
+    });
+    
     return data
   }
 
@@ -608,6 +613,7 @@ export class SupabaseService {
       }
       
       // First try to get existing quiz from database
+      console.log('📅 Getting today quiz from database...');
       let quiz = await this.getTodayQuiz();
       
       if (!quiz) {
@@ -615,25 +621,35 @@ export class SupabaseService {
         
         try {
           // Call the daily-quiz-generator Edge Function
+          console.log('🤖 Calling daily-quiz-generator edge function...');
           const { data, error } = await supabase.functions.invoke('daily-quiz-generator', {
             body: { force: false }
           });
           
           if (error) {
-            console.error('Edge Function error:', error);
+            console.error('❌ Edge Function error:', error);
             throw new Error('Edge Function failed');
           }
           
           if (data?.success && data?.quiz) {
-            console.log('✅ Daily quiz generated successfully with AI');
+            console.log('✅ Daily quiz generated successfully with AI:', {
+              questionsCount: data.quiz.questions?.length || 0,
+              subjects: data.quiz.subjects_covered || []
+            });
             quiz = data.quiz;
           } else {
+            console.error('❌ Invalid Edge Function response:', data);
             throw new Error('Invalid response from Edge Function');
           }
         } catch (edgeError) {
-          console.error('⚠️ Edge Function failed, using demo quiz:', edgeError);
+          console.error('⚠️ Edge Function failed, using demo quiz:', edgeError.message);
           quiz = this.createDemoQuiz();
         }
+      } else {
+        console.log('✅ Found existing quiz in database:', {
+          questionsCount: quiz.questions?.length || 0,
+          date: quiz.date
+        });
       }
       
       console.log('✅ Final quiz loaded successfully');
