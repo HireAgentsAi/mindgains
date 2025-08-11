@@ -196,6 +196,19 @@ export default function Profile() {
     );
   };
 
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await SupabaseService.signOut();
+      router.replace('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   const handleShareProfile = async () => {
     if (!userStats || !userProfile) return;
     
