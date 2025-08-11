@@ -29,7 +29,6 @@ import { theme } from '@/constants/theme';
 import MascotAvatar from '@/components/ui/MascotAvatar';
 import GradientButton from '@/components/ui/GradientButton';
 import { SupabaseService } from '@/utils/supabaseService';
-import { router } from 'expo-router';
 import { demoUserProfile, demoUserStats, demoUserAchievements, demoAchievements } from '@/utils/demoData';
 
 const { width = 375 } = Dimensions.get('window') || {};
