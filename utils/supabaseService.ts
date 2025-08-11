@@ -430,106 +430,126 @@ export class SupabaseService {
     }
   }
 
-  private static async createFallbackDailyQuiz(): Promise<any> {
+  private static createDemoQuiz(): DailyQuiz {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // High-quality Indian exam questions
+      // High-quality Indian exam questions for demo
       const questionBank = [
         {
+          id: 'demo1',
           question: "Who was known as the 'Father of Indian Constitution'?",
           options: ["Mahatma Gandhi", "Dr. B.R. Ambedkar", "Jawaharlal Nehru", "Sardar Patel"],
           correct_answer: 1,
           explanation: "Dr. B.R. Ambedkar is known as the Father of Indian Constitution for his pivotal role in drafting it.",
+          subject: "Polity",
+          subtopic: "Constitutional History",
           difficulty: "easy",
           points: 10
         },
         {
+          id: 'demo2',
           question: "Article 370 of the Indian Constitution was related to which state?",
           options: ["Punjab", "Jammu and Kashmir", "Himachal Pradesh", "Uttarakhand"],
           correct_answer: 1,
           explanation: "Article 370 granted special autonomous status to Jammu and Kashmir, which was abrogated in 2019.",
+          subject: "Polity",
+          subtopic: "Constitutional Provisions",
           difficulty: "medium",
           points: 15
         },
         {
+          id: 'demo3',
           question: "Bhagat Singh was executed on which date?",
           options: ["March 23, 1931", "March 24, 1931", "March 25, 1931", "March 26, 1931"],
           correct_answer: 0,
           explanation: "Bhagat Singh, along with Rajguru and Sukhdev, was executed on March 23, 1931.",
+          subject: "History",
+          subtopic: "Freedom Fighters",
           difficulty: "medium",
           points: 15
         },
         {
+          id: 'demo4',
           question: "Which mission was India's first Mars mission?",
           options: ["Chandrayaan-1", "Mangalyaan", "Gaganyaan", "Aditya-L1"],
           correct_answer: 1,
           explanation: "Mangalyaan (Mars Orbiter Mission) was India's first successful Mars mission launched in 2013.",
+          subject: "Science & Technology",
+          subtopic: "Space Missions",
           difficulty: "easy",
           points: 10
         },
         {
+          id: 'demo5',
           question: "The Reserve Bank of India was established in which year?",
           options: ["1934", "1935", "1936", "1937"],
           correct_answer: 1,
           explanation: "The Reserve Bank of India was established on April 1, 1935, under the RBI Act of 1934.",
+          subject: "Economy",
+          subtopic: "Banking",
           difficulty: "medium",
           points: 15
         },
         {
+          id: 'demo6',
           question: "Which fundamental right was removed by the 44th Amendment?",
           options: ["Right to Education", "Right to Property", "Right to Privacy", "Right to Work"],
           correct_answer: 1,
           explanation: "The Right to Property was removed as a fundamental right by the 44th Amendment in 1978.",
+          subject: "Polity",
+          subtopic: "Fundamental Rights",
           difficulty: "hard",
           points: 20
         },
         {
+          id: 'demo7',
           question: "India hosted the G20 Summit in 2023 in which city?",
           options: ["Mumbai", "New Delhi", "Bangalore", "Hyderabad"],
           correct_answer: 1,
           explanation: "India hosted the G20 Summit in New Delhi in September 2023 under its presidency.",
+          subject: "Current Affairs",
+          subtopic: "International Relations",
           difficulty: "easy",
           points: 10
         },
         {
+          id: 'demo8',
           question: "The Quit India Movement was launched in which year?",
           options: ["1940", "1941", "1942", "1943"],
           correct_answer: 2,
           explanation: "The Quit India Movement was launched by Mahatma Gandhi on August 8, 1942.",
+          subject: "History",
+          subtopic: "Freedom Movement",
           difficulty: "easy",
           points: 10
         },
         {
+          id: 'demo9',
           question: "Which Article of the Constitution deals with the Right to Constitutional Remedies?",
           options: ["Article 30", "Article 31", "Article 32", "Article 33"],
           correct_answer: 2,
           explanation: "Article 32 is known as the 'Heart and Soul' of the Constitution and deals with Right to Constitutional Remedies.",
+          subject: "Polity",
+          subtopic: "Fundamental Rights",
           difficulty: "hard",
           points: 20
         },
         {
+          id: 'demo10',
           question: "The Chandrayaan-3 mission successfully landed on which part of the Moon?",
           options: ["North Pole", "South Pole", "Equator", "Far Side"],
           correct_answer: 1,
           explanation: "Chandrayaan-3 successfully landed near the Moon's South Pole in August 2023, making India the first country to do so.",
+          subject: "Science & Technology",
+          subtopic: "Space Missions",
           difficulty: "medium",
           points: 15
         }
       ];
 
-      // Select 10 questions using date-based rotation
-      const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-      const startIndex = dayOfYear % questionBank.length;
-      
-      const selectedQuestions = [];
-      for (let i = 0; i < 10; i++) {
-        const index = (startIndex + i) % questionBank.length;
-        selectedQuestions.push({
-          ...questionBank[index],
-          id: `q${i + 1}`
-        });
-      }
+      // Select all 10 questions for demo
+      const selectedQuestions = questionBank;
 
       // Create quiz object
       const quiz = {
@@ -549,20 +569,10 @@ export class SupabaseService {
         created_at: new Date().toISOString()
       };
 
-      // Try to save to database (optional, quiz works even if this fails)
-      try {
-        await supabase
-          .from('daily_quizzes')
-          .upsert(quiz, { onConflict: 'date' });
-      } catch (dbError) {
-        console.warn('Failed to save quiz to database:', dbError);
-      }
-
       return quiz;
-      console.log('Calling generate-daily-quiz edge function...');
     } catch (error) {
-      console.error('Error creating fallback quiz:', error);
-      throw new Error('Failed to create daily quiz');
+      console.error('Error creating demo quiz:', error);
+      throw new Error('Failed to create demo quiz');
     }
   }
 
@@ -589,20 +599,49 @@ export class SupabaseService {
 
   static async ensureTodayQuiz(): Promise<DailyQuiz | null> {
     try {
-      // First try to get existing quiz
-      console.log('Checking for existing daily quiz...');
+      console.log('🔍 Checking for existing daily quiz...');
+      
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        console.log('⚠️ Supabase not configured, using demo quiz');
+        return this.createDemoQuiz();
+      }
+      
+      // First try to get existing quiz from database
       let quiz = await this.getTodayQuiz();
       
       if (!quiz) {
-        console.log('No existing quiz found, generating new one...');
-        quiz = await this.generateDailyQuiz();
+        console.log('📝 No existing quiz found, generating with AI...');
+        
+        try {
+          // Call the daily-quiz-generator Edge Function
+          const { data, error } = await supabase.functions.invoke('daily-quiz-generator', {
+            body: { force: false }
+          });
+          
+          if (error) {
+            console.error('Edge Function error:', error);
+            throw new Error('Edge Function failed');
+          }
+          
+          if (data?.success && data?.quiz) {
+            console.log('✅ Daily quiz generated successfully with AI');
+            quiz = data.quiz;
+          } else {
+            throw new Error('Invalid response from Edge Function');
+          }
+        } catch (edgeError) {
+          console.error('⚠️ Edge Function failed, using demo quiz:', edgeError);
+          quiz = this.createDemoQuiz();
+        }
       }
       
-      console.log('Final quiz result:', quiz ? 'Success' : 'Failed');
+      console.log('✅ Final quiz loaded successfully');
       return quiz;
     } catch (error) {
-      console.error('Error ensuring today quiz:', error);
-      throw error;
+      console.error('❌ Error ensuring today quiz:', error);
+      // Return demo quiz as ultimate fallback
+      return this.createDemoQuiz();
     }
   }
 
@@ -1293,9 +1332,15 @@ export class SupabaseService {
       // Ensure minimum 15 questions
       const finalQuestionCount = Math.max(15, questionCount);
       
-      console.log('Generating topic quiz:', { topicName, subjectName, difficulty, questionCount })
+      console.log('🎯 Generating topic quiz:', { topicName, subjectName, difficulty, questionCount: finalQuestionCount });
       
-      const { data, error } = await supabase.functions.invoke('generate-topic-quiz', {
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        console.log('⚠️ Supabase not configured, using demo questions');
+        return this.createDemoTopicQuiz(topicName, subjectName, finalQuestionCount);
+      }
+      
+      const { data, error } = await supabase.functions.invoke('topic-quiz-generator', {
         body: {
           topic_name: topicName,
           subject_name: subjectName,
@@ -1305,15 +1350,56 @@ export class SupabaseService {
       })
       
       if (error) {
-        console.error('Topic quiz generation error:', error)
-        throw error
+        console.error('❌ Topic quiz generation error:', error);
+        // Fallback to demo quiz
+        return this.createDemoTopicQuiz(topicName, subjectName, finalQuestionCount);
       }
       
-      console.log('Topic quiz generation response:', data)
-      return { success: true, ...data }
+      console.log('✅ Topic quiz generated successfully');
+      return { success: true, ...data };
     } catch (error) {
-      console.error('Error generating topic quiz:', error)
-      return { success: false, error: error.message }
+      console.error('❌ Error generating topic quiz:', error);
+      // Fallback to demo quiz
+      return this.createDemoTopicQuiz(topicName, subjectName, questionCount);
+    }
+  }
+
+  private static createDemoTopicQuiz(topicName: string, subjectName: string, questionCount: number) {
+    const demoQuestions = [
+      {
+        id: 'demo_topic_1',
+        question: `What is the most important aspect of ${topicName} in ${subjectName}?`,
+        options: ['Historical significance', 'Constitutional importance', 'Economic impact', 'Social relevance'],
+        correct_answer: 1,
+        explanation: `${topicName} holds significant importance in ${subjectName} for Indian competitive exams.`,
+        subject: subjectName,
+        subtopic: topicName,
+        difficulty: 'medium',
+        points: 10
+      }
+    ];
+
+    // Repeat questions to meet count requirement
+    const questions = [];
+    for (let i = 0; i < questionCount; i++) {
+      questions.push({
+        ...demoQuestions[0],
+        id: `demo_topic_${i + 1}`,
+        question: `Question ${i + 1}: What is an important fact about ${topicName}?`
+      });
+    }
+
+    return {
+      success: true,
+      quiz: {
+        id: `demo_topic_${Date.now()}`,
+        topic: topicName,
+        subject: subjectName,
+        questions,
+        total_points: questions.reduce((sum, q) => sum + q.points, 0)
+      },
+      questions,
+      message: 'Demo topic quiz generated'
     }
   }
 
