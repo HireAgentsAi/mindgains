@@ -279,9 +279,9 @@ export default function Home() {
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         {/* Enhanced Header */}
-        <Animated.View style={[styles.header, headerAnimatedStyle]}>
+        <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.greetingSection}>
               <Text style={styles.greeting}>{greeting}!</Text>
@@ -321,7 +321,7 @@ export default function Home() {
               </LinearGradient>
             </View>
           )}
-        </Animated.View>
+        </View>
 
         {/* Enhanced Progress Card */}
         <Animated.View style={[styles.progressSection, progressAnimatedStyle]}>
@@ -494,7 +494,7 @@ export default function Home() {
             </View>
           </ScrollView>
         </Animated.View>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 50,
   },
   header: {
     paddingHorizontal: theme.spacing.lg,

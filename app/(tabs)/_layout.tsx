@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import { Platform } from 'react-native';
 import { theme } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -12,21 +13,21 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background.primary,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border.primary,
-          height: 70,
-          paddingBottom: 12,
-          paddingTop: 12,
+          height: Platform.OS === 'android' ? 60 : 70,
+          paddingBottom: Platform.OS === 'android' ? 8 : 12,
+          paddingTop: Platform.OS === 'android' ? 8 : 12,
+          paddingHorizontal: 16,
           ...theme.shadows.card,
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
         tabBarActiveTintColor: theme.colors.accent.purple,
         tabBarInactiveTintColor: theme.colors.text.tertiary,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontFamily: theme.fonts.caption,
-          marginTop: 2,
-        },
+        tabBarShowLabel: false,
         tabBarIconStyle: {
-          marginTop: 2,
+          marginTop: 0,
         },
       }}
     >
@@ -37,7 +38,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
               name="home"
-              size={focused ? 22 : 20}
+              size={focused ? 26 : 22}
               color={color}
               solid={focused}
             />
@@ -51,7 +52,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
               name="graduation-cap"
-              size={focused ? 22 : 20}
+              size={focused ? 26 : 22}
               color={color}
               solid={focused}
             />
@@ -65,7 +66,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
               name="trophy"
-              size={focused ? 22 : 20}
+              size={focused ? 26 : 22}
               color={color}
               solid={focused}
             />
@@ -79,7 +80,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
               name="user-circle"
-              size={focused ? 22 : 20}
+              size={focused ? 26 : 22}
               color={color}
               solid={focused}
             />
