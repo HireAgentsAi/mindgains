@@ -59,7 +59,6 @@ function FloatingParticle({ index, delay }: { index: number; delay: number }) {
     opacity: opacity.value,
   }));
 
-  const icons = [Brain, Sparkles, Zap, Target, BookOpen, Trophy, Crown, Star];
   const iconNames = ['brain', 'star', 'bolt', 'bullseye', 'book', 'trophy', 'crown', 'star'];
   const iconName = iconNames[index % iconNames.length];
   const colors = [
