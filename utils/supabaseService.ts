@@ -389,21 +389,179 @@ export class SupabaseService {
   }
 
   static async generateDailyQuiz(): Promise<DailyQuiz | null> {
-    try {
-      console.log('Calling generate-daily-quiz edge function...');
-      
-      const { data, error } = await supabase.functions.invoke('generate-daily-quiz');
-      
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
+      // First try to get existing quiz for today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: existingQuiz } = await this.supabase
+        .from('daily_quizzes')
+        .select('*')
+        .eq('date', today)
+        .eq('is_active', true)
+        .single();
+
+      if (existingQuiz) {
+        return existingQuiz;
       }
-      
-      console.log('Daily quiz generation response:', data);
-      return data.quiz;
+
+      // Try Edge Function first
+      try {
+        const { data, error } = await this.supabase.functions.invoke('generate-daily-quiz');
+        
+        if (error) {
+          console.warn('Edge Function error:', error);
+          throw new Error('Edge Function failed');
+        }
+        
+        if (data?.success && data?.quiz) {
+          return data.quiz;
+        }
+        
+        throw new Error('Invalid response from Edge Function');
+      } catch (edgeFunctionError) {
+        console.warn('Edge Function failed, using fallback:', edgeFunctionError);
+        
+        // Fallback: Create quiz directly in frontend
+        const fallbackQuiz = await this.createFallbackDailyQuiz();
+        return fallbackQuiz;
+      }
     } catch (error) {
-      console.error('Error generating daily quiz:', error);
-      throw error;
+      console.error('Error in generateDailyQuiz:', error);
+      throw new Error('Failed to generate daily quiz');
+    }
+  }
+
+  private async createFallbackDailyQuiz(): Promise<any> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // High-quality Indian exam questions
+      const questionBank = [
+        {
+          question: "Who was known as the 'Father of Indian Constitution'?",
+          options: ["Mahatma Gandhi", "Dr. B.R. Ambedkar", "Jawaharlal Nehru", "Sardar Patel"],
+          correct_answer: 1,
+          explanation: "Dr. B.R. Ambedkar is known as the Father of Indian Constitution for his pivotal role in drafting it.",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          question: "Article 370 of the Indian Constitution was related to which state?",
+          options: ["Punjab", "Jammu and Kashmir", "Himachal Pradesh", "Uttarakhand"],
+          correct_answer: 1,
+          explanation: "Article 370 granted special autonomous status to Jammu and Kashmir, which was abrogated in 2019.",
+          difficulty: "medium",
+          points: 15
+        },
+        {
+          question: "Bhagat Singh was executed on which date?",
+          options: ["March 23, 1931", "March 24, 1931", "March 25, 1931", "March 26, 1931"],
+          correct_answer: 0,
+          explanation: "Bhagat Singh, along with Rajguru and Sukhdev, was executed on March 23, 1931.",
+          difficulty: "medium",
+          points: 15
+        },
+        {
+          question: "Which mission was India's first Mars mission?",
+          options: ["Chandrayaan-1", "Mangalyaan", "Gaganyaan", "Aditya-L1"],
+          correct_answer: 1,
+          explanation: "Mangalyaan (Mars Orbiter Mission) was India's first successful Mars mission launched in 2013.",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          question: "The Reserve Bank of India was established in which year?",
+          options: ["1934", "1935", "1936", "1937"],
+          correct_answer: 1,
+          explanation: "The Reserve Bank of India was established on April 1, 1935, under the RBI Act of 1934.",
+          difficulty: "medium",
+          points: 15
+        },
+        {
+          question: "Which fundamental right was removed by the 44th Amendment?",
+          options: ["Right to Education", "Right to Property", "Right to Privacy", "Right to Work"],
+          correct_answer: 1,
+          explanation: "The Right to Property was removed as a fundamental right by the 44th Amendment in 1978.",
+          difficulty: "hard",
+          points: 20
+        },
+        {
+          question: "India hosted the G20 Summit in 2023 in which city?",
+          options: ["Mumbai", "New Delhi", "Bangalore", "Hyderabad"],
+          correct_answer: 1,
+          explanation: "India hosted the G20 Summit in New Delhi in September 2023 under its presidency.",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          question: "The Quit India Movement was launched in which year?",
+          options: ["1940", "1941", "1942", "1943"],
+          correct_answer: 2,
+          explanation: "The Quit India Movement was launched by Mahatma Gandhi on August 8, 1942.",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          question: "Which Article of the Constitution deals with the Right to Constitutional Remedies?",
+          options: ["Article 30", "Article 31", "Article 32", "Article 33"],
+          correct_answer: 2,
+          explanation: "Article 32 is known as the 'Heart and Soul' of the Constitution and deals with Right to Constitutional Remedies.",
+          difficulty: "hard",
+          points: 20
+        },
+        {
+          question: "The Chandrayaan-3 mission successfully landed on which part of the Moon?",
+          options: ["North Pole", "South Pole", "Equator", "Far Side"],
+          correct_answer: 1,
+          explanation: "Chandrayaan-3 successfully landed near the Moon's South Pole in August 2023, making India the first country to do so.",
+          difficulty: "medium",
+          points: 15
+        }
+      ];
+
+      // Select 10 questions using date-based rotation
+      const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+      const startIndex = dayOfYear % questionBank.length;
+      
+      const selectedQuestions = [];
+      for (let i = 0; i < 10; i++) {
+        const index = (startIndex + i) % questionBank.length;
+        selectedQuestions.push({
+          ...questionBank[index],
+          id: `q${i + 1}`
+        });
+      }
+
+      // Create quiz object
+      const quiz = {
+        id: `quiz-${today}`,
+        date: today,
+        questions: selectedQuestions,
+        total_points: selectedQuestions.reduce((sum, q) => sum + q.points, 0),
+        difficulty_distribution: {
+          easy: selectedQuestions.filter(q => q.difficulty === 'easy').length,
+          medium: selectedQuestions.filter(q => q.difficulty === 'medium').length,
+          hard: selectedQuestions.filter(q => q.difficulty === 'hard').length
+        },
+        subjects_covered: ['History', 'Polity', 'Geography', 'Economy', 'Science & Technology', 'Current Affairs'],
+        generated_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true,
+        created_at: new Date().toISOString()
+      };
+
+      // Try to save to database (optional, quiz works even if this fails)
+      try {
+        await this.supabase
+          .from('daily_quizzes')
+          .upsert(quiz, { onConflict: 'date' });
+      } catch (dbError) {
+        console.warn('Failed to save quiz to database:', dbError);
+      }
+
+      return quiz;
+      console.log('Calling generate-daily-quiz edge function...');
+    } catch (error) {
+      console.error('Error creating fallback quiz:', error);
+      throw new Error('Failed to create daily quiz');
     }
   }
 

@@ -65,6 +65,12 @@ echo "-----------------------------------"
 echo "🔐 Setting OpenAI API key..."
 echo $OPENAI_API_KEY | npx supabase secrets set OPENAI_API_KEY
 
+echo "🔐 Setting Supabase URL..."
+echo $EXPO_PUBLIC_SUPABASE_URL | npx supabase secrets set SUPABASE_URL
+
+echo "🔐 Setting Supabase Service Role Key..."
+echo $EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY | npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY
+
 # Optional: Set additional API keys if available
 if [ ! -z "$CLAUDE_API_KEY" ]; then
     echo "🔐 Setting Claude API key..."
