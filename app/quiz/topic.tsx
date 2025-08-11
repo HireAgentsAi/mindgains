@@ -350,7 +350,6 @@ export default function TopicQuizScreen() {
                 size="large"
                 fullWidth
                 icon={<FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />}
-              <FontAwesome5 name="star" size={10} color={theme.colors.accent.yellow} solid />
               />
             </View>
           </View>
