@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface MascotAvatarProps {
   size?: number;
@@ -111,49 +112,44 @@ export default function MascotAvatar({
       default: return [theme.colors.accent.purple, theme.colors.accent.blue];
     }
   };
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.02, { duration: 1500 }),
-          withTiming(1, { duration: 1500 })
-        ),
-        -1,
-        true
-      );
-    }
-  }, [animated]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { rotate: `${rotation.value}deg` }
+    ],
+    shadowOpacity: glowing ? 0.3 + glow.value * 0.4 : 0.15,
+    shadowRadius: glowing ? 15 + glow.value * 10 : 8,
   }));
 
+  const renderContent = () => (
+    <LinearGradient
+      colors={getMascotColors()}
+      style={styles.mascotGradient}
+    >
+      <FontAwesome5 
+        name={getMascotIcon()} 
+        size={size * 0.5} 
+        color={theme.colors.text.primary} 
+        solid 
+      />
+    </LinearGradient>
+  );
 
   return (
     <Animated.View
       style={[
-      { rotate: `${rotation.value}deg` },
+        animatedStyle,
         styles.container,
         {
           width: size,
           height: size,
-          backgroundColor,
         },
       ]}
     >
       {renderContent()}
     </Animated.View>
-      <LinearGradient
-        colors={getMascotColors()}
-        style={styles.mascotGradient}
-      >
-        <FontAwesome5 
-          name={getMascotIcon()} 
-          size={size * 0.5} 
-          color={theme.colors.text.primary} 
-          solid 
-        />
-      </LinearGradient>
-    shadowOpacity: glowing ? 0.3 + glow.value * 0.4 : 0.15,
-    shadowRadius: glowing ? 15 + glow.value * 10 : 8,
+  );
 }
 
 const styles = StyleSheet.create({
