@@ -107,18 +107,7 @@ export default function DailyQuizScreen() {
       if (!isMounted.current) return;
       
       // Check authentication first
-      const user = await SupabaseService.getCurrentUser();
-      if (!user) {
-        if (!isMounted.current) return;
-        router.replace('/auth');
-        return;
-      }
-
-      // Check user limits
-      const limits = await SupabaseService.checkUserLimits(user.id);
-      if (!limits.canTakeQuiz) {
-        if (!isMounted.current) return;
-        Alert.alert(
+      // Always ensure today's quiz exists
           'Daily Limit Reached',
           `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
           [
