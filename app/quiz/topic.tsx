@@ -347,7 +347,6 @@ export default function TopicQuizScreen() {
               <GradientButton
                 title="Back to Subjects"
                 onPress={() => router.replace('/(tabs)/learn')}
-              <FontAwesome5 name="layer-group" size={10} color={theme.colors.accent.blue} />
                 size="large"
                 fullWidth
                 icon={<FontAwesome5 name="arrow-right" size={16} color={theme.colors.text.primary} solid />}
