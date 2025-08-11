@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -52,6 +52,7 @@ interface QuickAction {
 }
 
 export default function Home() {
+  const isMounted = useRef(true);
   const [userStats, setUserStats] = useState<UserStats>({
     currentLevel: 12,
     totalXP: 8450,
@@ -75,6 +76,7 @@ export default function Home() {
   const streakPulse = useSharedValue(1);
 
   useEffect(() => {
+    isMounted.current = true;
     loadUserData();
     setGreeting(getTimeBasedGreeting());
     startAnimations();
@@ -84,7 +86,10 @@ export default function Home() {
       setCurrentRecommendation(prev => (prev + 1) % Math.max(mascotRecommendations.length, 1));
     }, 5000);
     
-    return () => clearInterval(interval);
+    return () => {
+      isMounted.current = false;
+      clearInterval(interval);
+    };
   }, [mascotRecommendations.length]);
 
   const startAnimations = () => {
@@ -121,8 +126,10 @@ export default function Home() {
 
   const loadUserData = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
         // Use demo data
         setUserStats({
           currentLevel: demoUserStats.current_level,
@@ -142,12 +149,18 @@ export default function Home() {
       }
       
       const user = await SupabaseService.getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        if (!isMounted.current) return;
+        router.replace('/auth');
+        return;
+      }
 
       const [stats, recommendations] = await Promise.all([
         SupabaseService.getUserStats(user.id),
         SupabaseService.getMascotRecommendations(user.id)
       ]);
+
+      if (!isMounted.current) return;
 
       if (stats) {
         setUserStats({
@@ -163,6 +176,8 @@ export default function Home() {
       setMascotRecommendations(recommendations);
     } catch (error) {
       console.error('Error loading user data:', error);
+    } finally {
+      if (!isMounted.current) return;
     }
   };
 

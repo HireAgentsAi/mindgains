@@ -66,6 +66,7 @@ const LEAGUES = {
 };
 
 export default function Leaderboard() {
+  const isMounted = useRef(true);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [currentFilter, setCurrentFilter] = useState<string>('global');
   const [isLoading, setIsLoading] = useState(true);
@@ -79,8 +80,13 @@ export default function Leaderboard() {
   const shimmerPosition = useSharedValue(-1);
 
   useEffect(() => {
+    isMounted.current = true;
     loadLeaderboard();
     startAnimations();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [currentFilter]);
 
   const startAnimations = () => {
@@ -107,10 +113,12 @@ export default function Leaderboard() {
 
   const loadLeaderboard = async () => {
     try {
+      if (!isMounted.current) return;
       setIsLoading(true);
       
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
         // Use enhanced demo data
         const mockData: LeaderboardUser[] = [
           { 
@@ -202,11 +210,13 @@ export default function Leaderboard() {
       
       // Load real leaderboard data
       const leaderboard = await SupabaseService.getLeaderboard(currentFilter as any);
+      if (!isMounted.current) return;
       setLeaderboardData(leaderboard);
       
     } catch (error) {
       console.error('Error loading leaderboard:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
       setRefreshing(false);
     }

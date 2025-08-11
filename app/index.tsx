@@ -84,6 +84,7 @@ function FloatingParticle({ index, delay }: { index: number; delay: number }) {
 }
 
 export default function SplashScreen() {
+  const isMounted = useRef(true);
   // Animation values
   const logoScale = useSharedValue(0);
   const logoOpacity = useSharedValue(0);
@@ -98,10 +99,12 @@ export default function SplashScreen() {
   const glowIntensity = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     const initializeApp = async () => {
       startAnimations();
       
       try {
+        if (!isMounted.current) return;
         // Check if Supabase is configured
         if (process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
           try {
@@ -114,7 +117,9 @@ export default function SplashScreen() {
             ]);
             
             if (user) {
+              if (!isMounted.current) return;
               setTimeout(() => {
+                if (!isMounted.current) return;
                 router.replace('/(tabs)');
               }, 4000);
               return;
@@ -126,20 +131,28 @@ export default function SplashScreen() {
         }
         
         // Navigate to auth screen (works in both demo and real mode)
+        if (!isMounted.current) return;
         setTimeout(() => {
+          if (!isMounted.current) return;
           router.replace('/auth');
         }, 4000);
         
       } catch (error) {
         console.log('Navigation initialization error:', error);
         // Always provide fallback navigation
+        if (!isMounted.current) return;
         setTimeout(() => {
+          if (!isMounted.current) return;
           router.replace('/auth');
         }, 4000);
       }
     };
     
     initializeApp();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const startAnimations = () => {

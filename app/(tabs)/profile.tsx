@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   Share,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,6 +64,7 @@ interface UserStats {
 }
 
 export default function Profile() {
+  const isMounted = useRef(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -80,8 +82,13 @@ export default function Profile() {
   const shimmerPosition = useSharedValue(-1);
 
   useEffect(() => {
+    isMounted.current = true;
     loadProfileData();
     startAnimations();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const startAnimations = () => {
@@ -110,8 +117,10 @@ export default function Profile() {
 
   const loadProfileData = async () => {
     try {
+      if (!isMounted.current) return;
       // Check if Supabase is configured
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        if (!isMounted.current) return;
         // Use demo data
         setUserProfile(demoUserProfile);
         setUserStats(demoUserStats);
@@ -144,6 +153,7 @@ export default function Profile() {
       
       const user = await SupabaseService.getCurrentUser();
       if (!user) {
+        if (!isMounted.current) return;
         router.replace('/auth');
         return;
       }
@@ -154,6 +164,8 @@ export default function Profile() {
         SupabaseService.getUserAchievements(user.id),
         SupabaseService.getAllAchievements(),
       ]);
+      
+      if (!isMounted.current) return;
 
       setUserProfile(profile);
       setUserStats(stats);
@@ -184,6 +196,7 @@ export default function Profile() {
     } catch (error) {
       console.error('Error loading profile data:', error);
     } finally {
+      if (!isMounted.current) return;
       setIsLoading(false);
     }
   };

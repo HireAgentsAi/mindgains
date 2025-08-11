@@ -33,6 +33,7 @@ import Animated, {
 const { width = 375, height = 667 } = Dimensions.get('window') || {};
 
 export default function AuthScreen() {
+  const isMounted = useRef(true);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +57,7 @@ export default function AuthScreen() {
   const backgroundY = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     // Start animations
     cardOpacity.value = withTiming(1, { duration: 800 });
     cardScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back()) });
@@ -76,6 +78,10 @@ export default function AuthScreen() {
       -1,
       false
     );
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const handleValidation = () => {
@@ -122,12 +128,14 @@ export default function AuthScreen() {
         if (isLogin) {
           // Simulate successful login
           setTimeout(() => {
+            if (!isMounted.current) return;
             setLoading(false);
             router.replace('/(tabs)');
           }, 1500);
         } else {
           // Simulate successful signup
           setTimeout(() => {
+            if (!isMounted.current) return;
             setLoading(false);
             setPopup({
               visible: true,
@@ -147,11 +155,13 @@ export default function AuthScreen() {
         // Track successful login
         await SupabaseService.trackUserActivity(user.id, 'sign_in');
         
+        if (!isMounted.current) return;
         router.replace('/(tabs)');
       } else {
         const { error } = await SupabaseService.signUp(email, password, fullName);
         if (error) throw new Error(error.message);
         
+        if (!isMounted.current) return;
         setPopup({
           visible: true,
           title: 'Account Created',
@@ -163,6 +173,7 @@ export default function AuthScreen() {
       setError(err.message);
       animateError();
     } finally {
+      if (!isMounted.current) return;
       setLoading(false);
     }
   };

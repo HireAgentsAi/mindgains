@@ -57,6 +57,7 @@ interface QuickAction {
 }
 
 export default function Learn() {
+  const isMounted = useRef(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [userProgress, setUserProgress] = useState({
@@ -69,12 +70,18 @@ export default function Learn() {
   const fadeIn = useSharedValue(0);
 
   useEffect(() => {
+    isMounted.current = true;
     loadSubjects();
     fadeIn.value = withTiming(1, { duration: 800 });
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const loadSubjects = async () => {
     try {
+      if (!isMounted.current) return;
       // Mock data - in real app, load from Supabase
       const mockSubjects: Subject[] = [
         {
@@ -129,6 +136,7 @@ export default function Learn() {
         },
       ];
       
+      if (!isMounted.current) return;
       setSubjects(mockSubjects);
     } catch (error) {
       console.error('Error loading subjects:', error);
@@ -137,7 +145,11 @@ export default function Learn() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadSubjects().finally(() => setRefreshing(false));
+    loadSubjects().finally(() => {
+      if (isMounted.current) {
+        setRefreshing(false);
+      }
+    });
   };
 
   const quickActions: QuickAction[] = [
