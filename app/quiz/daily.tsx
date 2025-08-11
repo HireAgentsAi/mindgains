@@ -255,7 +255,13 @@ export default function DailyQuizScreen() {
         timeSpent
       });
       
-      // Submit quiz results with comprehensive error handling
+      // Submit quiz results
+      console.log('🚀 Calling submitDailyQuiz with:', {
+        quizId: quiz.id,
+        answersLength: userAnswers.length,
+        timeSpent
+      });
+      
       const submitResult = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
       
       console.log('📤 Submit result:', submitResult);
@@ -265,8 +271,293 @@ export default function DailyQuizScreen() {
       if (submitResult.success && submitResult.results) {
         console.log('✅ Quiz submitted successfully with results');
         setResults(submitResult.results);
+        
+        // Show success message
+        Alert.alert(
+          '🎉 Quiz Complete!',
+          `You scored ${submitResult.results.score_percentage}%!\n\n${submitResult.results.grok_message || 'Great job!'}`,
+          [{ text: 'View Results', onPress: () => {} }]
+        );
       } else {
-        console.log('⚠️ Quiz submission failed, creating local results');
+        console.log('⚠️ Quiz submission failed, error:', submitResult.error);
+        throw new Error(submitResult.error || 'Submission failed');
+      }
+      
+      setIsCompleted(true);
+    } catch (error) {
+      console.error('❌ Error submitting quiz:', error);
+      
+      if (!isMounted.current) return;
+      
+      // Show error but still display results
+      Alert.alert(
+        'Submission Error',
+        'Quiz completed but results may not be saved. You can still view your performance.',
+        [{ text: 'View Results', onPress: () => {} }]
+      );
+      
+      // Create comprehensive local results as fallback
+      const correctCount = userAnswers.filter((answer, index) => 
+        answer === quiz!.questions[index].correct_answer
+      ).length;
+      const percentage = Math.round((correctCount / quiz!.questions.length) * 100);
+      
+      const localResults = {
+        correct_answers: correctCount,
+        total_questions: quiz!.questions.length,
+        score_percentage: percentage,
+        total_points: Math.round(percentage * 2), // Approximate points
+        time_spent: timeSpent,
+        xp_earned: Math.round(percentage * 1.5), // Approximate XP
+        detailed_results: quiz!.questions.map((q, index) => ({
+          question_id: q.id,
+          question: q.question,
+          options: q.options,
+          user_answer: userAnswers[index],
+          correct_answer: q.correct_answer,
+          is_correct: userAnswers[index] === q.correct_answer,
+          explanation: q.explanation,
+          subject: q.subject,
+          subtopic: q.subtopic,
+          difficulty: q.difficulty,
+          points_earned: userAnswers[index] === q.correct_answer ? q.points : 0
+        })),
+        grok_message: getGrokMessage(percentage, correctCount, quiz!.questions.length),
+        mascot_celebration: getMascotCelebration(percentage)
+      };
+      
+      setResults(localResults);
+      setIsCompleted(true);
+    } finally {
+      if (!isMounted.current) return;
+      setIsSubmitting(false);
+    }
+  };
+
+  const getGrokMessage = (percentage: number, correct: number, total: number): string => {
+    if (percentage === 100) {
+      return "🎯 Perfect score! You're basically a walking encyclopedia of Indian knowledge! Time to challenge Einstein! 🧠✨";
+    } else if (percentage >= 90) {
+      return "🌟 Outstanding! You're so smart, even Google would ask you for answers! Keep this momentum going! 🚀";
+    } else if (percentage >= 80) {
+      return "💪 Excellent work! You're crushing it like Bhagat Singh crushed the British morale! 🇮🇳";
+    } else if (percentage >= 70) {
+      return "📚 Good job! You're on the right track - just need to channel your inner Chandragupta Maurya! 👑";
+    } else if (percentage >= 60) {
+      return "🎯 Not bad! Rome wasn't built in a day, and neither was the Taj Mahal. Keep practicing! 🏛️";
+    } else if (percentage >= 50) {
+      return "🤔 Hmm, looks like you need to spend more time with books than with Netflix! But hey, we all start somewhere! 📖";
+    } else {
+      return "😅 Well, at least you showed up! That's more than what some Mughal emperors did for their empire! Try again tomorrow! 💪";
+    }
+  };
+
+  const getMascotCelebration = (percentage: number): string => {
+    if (percentage >= 90) return 'celebrating';
+    if (percentage >= 70) return 'excited';
+    if (percentage >= 50) return 'happy';
+    return 'encouraging';
+  };
+
+  const handleBack = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+      setSelectedAnswer(userAnswers[currentQuestionIndex - 1] !== -1 ? userAnswers[currentQuestionIndex - 1] : null);
+      setShowExplanation(false);
+    } else {
+      router.back();
+    }
+  };
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ translateY: cardTranslateY.value }],
+  }));
+
+  const mascotAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: mascotScale.value }],
+  }));
+
+  const optionAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: optionScale.value }],
+  }));
+  
+  const shimmerAnimatedStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(
+      shimmerPosition.value,
+      [-1, 1],
+      [-width * 1.5, width * 1.5]
+    );
+    
+    return {
+      transform: [
+        { translateX },
+        { rotate: '-30deg' }
+      ],
+    };
+  });
+  
+  const progressAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: progressPulse.value }],
+  }));
+
+  if (isLoading) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <View style={styles.loadingContainer}>
+          <MascotAvatar size={100} animated={true} glowing={true} mood="focused" />
+          <Text style={styles.loadingText}>Loading today's quiz...</Text>
+          <Text style={styles.loadingSubtext}>AI-powered questions on History, Polity, Geography, Economy, Science & Current Affairs</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (!quiz) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+        ]}
+        style={styles.container}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Today's quiz is not available</Text>
+          <GradientButton
+            title="Go Back"
+            onPress={() => router.back()}
+            size="medium"
+          />
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (isCompleted && results) {
+    return (
+      <LinearGradient
+        colors={[
+          theme.colors.background.primary,
+          theme.colors.background.secondary,
+          theme.colors.background.tertiary,
+        ]}
+        style={styles.container}
+      >
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.resultsContainer}>
+            <View style={styles.resultsHeader}>
+              <MascotAvatar size={100} animated={true} glowing={true} mood="celebrating" />
+              
+              <LinearGradient
+                colors={[theme.colors.accent.green, theme.colors.accent.cyan]}
+                style={styles.resultsBadge}
+              >
+                <Trophy size={32} color={theme.colors.text.primary} />
+                <Text style={styles.resultsTitle}>Quiz Complete!</Text>
+              </LinearGradient>
+              
+              <Text style={styles.resultsScore}>{results.score_percentage}%</Text>
+              <Text style={styles.resultsSubtext}>
+                {results.correct_answers} out of {results.total_questions} correct
+              </Text>
+              
+              {/* Grok's Witty Message */}
+              {results.grok_message && (
+                <View style={styles.grokMessageContainer}>
+                  <LinearGradient
+                    colors={[theme.colors.accent.purple + '20', theme.colors.accent.blue + '20']}
+                    style={styles.grokMessageCard}
+                  >
+                    <View style={styles.grokMessageHeader}>
+                      <Text style={styles.grokMessageIcon}>🤖</Text>
+                      <Text style={styles.grokMessageTitle}>Grok's Take</Text>
+                    </View>
+                    <Text style={styles.grokMessageText}>{results.grok_message}</Text>
+                  </LinearGradient>
+                </View>
+              )}
+              
+              {/* XP Reward Display */}
+              {results.xp_earned && (
+                <View style={styles.xpRewardContainer}>
+                  <LinearGradient
+                    colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
+                    style={styles.xpRewardBadge}
+                  >
+                    <Zap size={20} color={theme.colors.text.primary} />
+                    <Text style={styles.xpRewardText}>+{results.xp_earned} XP Earned!</Text>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.resultsStats}>
+              <View style={styles.resultStat}>
+                <CheckCircle size={24} color={theme.colors.accent.green} />
+                <Text style={styles.resultStatValue}>{results.correct_answers}</Text>
+                <Text style={styles.resultStatLabel}>Correct</Text>
+              </View>
+              
+              <View style={styles.resultStat}>
+                <X size={24} color={theme.colors.accent.pink} />
+                <Text style={styles.resultStatValue}>{results.total_questions - results.correct_answers}</Text>
+                <Text style={styles.resultStatLabel}>Incorrect</Text>
+              </View>
+              
+              <View style={styles.resultStat}>
+                <Clock size={24} color={theme.colors.accent.blue} />
+                <Text style={styles.resultStatValue}>{Math.round(results.time_spent / 60)}m</Text>
+                <Text style={styles.resultStatLabel}>Time</Text>
+              </View>
+              
+              <View style={styles.resultStat}>
+                <Star size={24} color={theme.colors.accent.yellow} />
+                <Text style={styles.resultStatValue}>{results.total_points}</Text>
+                <Text style={styles.resultStatLabel}>Points</Text>
+              </View>
+            </View>
+
+            <View style={styles.actionButtons}>
+              <GradientButton
+                title="View Detailed Results"
+                onPress={() => router.push({
+                  pathname: '/quiz/daily-results',
+                  params: { 
+                    results: JSON.stringify(results),
+                    quizDate: quiz.date
+                  }
+                })}
+                size="large"
+                fullWidth
+                icon={<Brain size={20} color={theme.colors.text.primary} />}
+                colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+                style={styles.actionButton}
+              />
+              
+              <GradientButton
+                title="Back to Home"
+                onPress={() => router.replace('/(tabs)')}
+                size="large"
+                fullWidth
+                icon={<ArrowRight size={20} color={theme.colors.text.primary} />}
+                colors={[theme.colors.accent.green, theme.colors.accent.cyan]}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </LinearGradient>
+    );
+  }
         // Create comprehensive local results as fallback
         const localResults = {
           correct_answers: correctCount,
