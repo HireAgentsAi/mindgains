@@ -190,7 +190,6 @@ export default function OnboardingScreen() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const progressValue = useSharedValue(0);
@@ -200,7 +199,6 @@ export default function OnboardingScreen() {
   const shimmerPosition = useSharedValue(-1);
 
   useEffect(() => {
-    setIsMounted(true);
     isMounted.current = true;
     
     // Check if user is authenticated with error handling
