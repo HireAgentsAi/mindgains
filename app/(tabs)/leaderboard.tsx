@@ -116,98 +116,6 @@ export default function Leaderboard() {
       if (!isMounted.current) return;
       setIsLoading(true);
       
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        if (!isMounted.current) return;
-        // Use enhanced demo data
-        const mockData: LeaderboardUser[] = [
-          { 
-            id: '1', 
-            full_name: 'Rahul Kumar', 
-            total_xp: 47500, 
-            current_level: 48, 
-            streak_days: 32, 
-            rank: 1, 
-            location: 'Delhi',
-            is_current_user: false,
-            league: 'diamond',
-            status: 'studying'
-          },
-          { 
-            id: '2', 
-            full_name: 'Priya Sharma', 
-            total_xp: 43400, 
-            current_level: 44, 
-            streak_days: 28, 
-            rank: 2, 
-            location: 'Mumbai',
-            league: 'diamond',
-            status: 'online'
-          },
-          { 
-            id: '3', 
-            full_name: 'Amit Singh', 
-            total_xp: 39800, 
-            current_level: 40, 
-            streak_days: 24, 
-            rank: 3, 
-            location: 'Bangalore',
-            league: 'emerald',
-            status: 'offline'
-          },
-          { 
-            id: '4', 
-            full_name: 'You', 
-            total_xp: 8450, 
-            current_level: 12, 
-            streak_days: 15, 
-            rank: 234, 
-            location: 'Chennai',
-            is_current_user: true,
-            league: 'ruby',
-            status: 'online'
-          },
-          { 
-            id: '5', 
-            full_name: 'Sneha Patel', 
-            total_xp: 7200, 
-            current_level: 11, 
-            streak_days: 18, 
-            rank: 287, 
-            location: 'Pune',
-            league: 'gold',
-            status: 'studying'
-          },
-          { 
-            id: '6', 
-            full_name: 'Arjun Reddy', 
-            total_xp: 6800, 
-            current_level: 10, 
-            streak_days: 12, 
-            rank: 312, 
-            location: 'Hyderabad',
-            league: 'gold',
-            status: 'online'
-          },
-          { 
-            id: '7', 
-            full_name: 'Kavya Nair', 
-            total_xp: 5900, 
-            current_level: 9, 
-            streak_days: 8, 
-            rank: 445, 
-            location: 'Kochi',
-            league: 'silver',
-            status: 'offline'
-          },
-        ];
-
-        setLeaderboardData(mockData);
-        setCurrentUser(mockData.find(u => u.is_current_user) || null);
-        setIsLoading(false);
-        return;
-      }
-      
       // Load real leaderboard data
       const leaderboard = await SupabaseService.getLeaderboard(currentFilter as any);
       if (!isMounted.current) return;
@@ -808,7 +716,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeArea: {
-    paddingTop: 20,
   },
   header: {
     flexDirection: 'row',
