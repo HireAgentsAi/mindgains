@@ -389,9 +389,10 @@ export class SupabaseService {
   }
 
   static async generateDailyQuiz(): Promise<DailyQuiz | null> {
+    try {
       // First try to get existing quiz for today
       const today = new Date().toISOString().split('T')[0];
-      const { data: existingQuiz } = await this.supabase
+      const { data: existingQuiz } = await supabase
         .from('daily_quizzes')
         .select('*')
         .eq('date', today)
@@ -404,7 +405,7 @@ export class SupabaseService {
 
       // Try Edge Function first
       try {
-        const { data, error } = await this.supabase.functions.invoke('generate-daily-quiz');
+        const { data, error } = await supabase.functions.invoke('generate-daily-quiz');
         
         if (error) {
           console.warn('Edge Function error:', error);
@@ -429,7 +430,7 @@ export class SupabaseService {
     }
   }
 
-  private async createFallbackDailyQuiz(): Promise<any> {
+  private static async createFallbackDailyQuiz(): Promise<any> {
     try {
       const today = new Date().toISOString().split('T')[0];
       
@@ -550,7 +551,7 @@ export class SupabaseService {
 
       // Try to save to database (optional, quiz works even if this fails)
       try {
-        await this.supabase
+        await supabase
           .from('daily_quizzes')
           .upsert(quiz, { onConflict: 'date' });
       } catch (dbError) {
