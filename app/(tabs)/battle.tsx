@@ -495,13 +495,13 @@ Download MindGains AI: https://mindgains.ai
             {/* Quick Battle Section */}
             <Animated.View style={[styles.quickBattleSection, battleAnimatedStyle]}>
               <LinearGradient
-                colors={[
+                colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
                   theme.colors.accent.pink + '30',
                   theme.colors.accent.purple + '30',
                 ]}
                 style={styles.quickBattleCard}
               >
-                <Animated.View style={sparkleAnimatedStyle}>
+                <FontAwesome5 name="fist-raised" size={12} color={theme.colors.text.primary} solid />
                   <View style={styles.sparkleContainer}>
                     <FontAwesome5 name="sparkles" size={20} color={theme.colors.accent.yellow} solid />
                     <FontAwesome5 name="bolt" size={16} color={theme.colors.accent.cyan} solid />

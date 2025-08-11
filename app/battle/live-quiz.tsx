@@ -416,7 +416,7 @@ export default function LiveQuizScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <FontAwesome5 name="sword" size={20} color={theme.colors.accent.pink} solid />
+          <FontAwesome5 name="fist-raised" size={20} color={theme.colors.accent.pink} solid />
           <Text style={styles.headerTitle}>LIVE BATTLE</Text>
         </View>
         
