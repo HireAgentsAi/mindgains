@@ -395,8 +395,12 @@ export class SupabaseService {
 
   static async generateDailyQuiz(): Promise<DailyQuiz | null> {
     try {
+      console.log('🚀 Starting daily quiz generation process...');
+      
       // First try to get existing quiz for today
       const today = new Date().toISOString().split('T')[0];
+      console.log('📅 Today date:', today);
+      
       const { data: existingQuiz } = await supabase
         .from('daily_quizzes')
         .select('*')
@@ -405,34 +409,398 @@ export class SupabaseService {
         .single();
 
       if (existingQuiz) {
+        console.log('✅ Found existing quiz in database');
         return existingQuiz;
       }
 
-      // Try Edge Function first
+      console.log('🤖 No existing quiz, generating with AI...');
+      
+      // Try multiple AI providers in sequence
       try {
-        const { data, error } = await supabase.functions.invoke('generate-daily-quiz');
+        console.log('🎯 Attempting daily-quiz-generator edge function...');
+        const { data, error } = await supabase.functions.invoke('daily-quiz-generator', {
+          body: { force: true, test_mode: true }
+        });
         
         if (error) {
-          console.warn('Edge Function error:', error);
-          throw new Error('Edge Function failed');
+          console.error('❌ Edge Function error:', error);
+          throw new Error(`Edge Function failed: ${error.message}`);
         }
         
         if (data?.success && data?.quiz) {
+          console.log('✅ Edge Function generated quiz successfully:', {
+            questionsCount: data.quiz.questions?.length || 0,
+            subjects: data.quiz.subjects_covered || [],
+            method: data.generation_method
+          });
           return data.quiz;
         }
         
-        throw new Error('Invalid response from Edge Function');
+        console.error('❌ Invalid Edge Function response:', data);
+        throw new Error(`Invalid response: ${JSON.stringify(data)}`);
       } catch (edgeFunctionError) {
-        console.warn('Edge Function failed, using fallback:', edgeFunctionError);
+        console.error('❌ Edge Function completely failed:', edgeFunctionError.message);
         
-        // Fallback: Create quiz directly in frontend
-        const fallbackQuiz = await this.createFallbackDailyQuiz();
-        return fallbackQuiz;
+        // Try direct AI generation as fallback
+        console.log('🔄 Trying direct AI generation fallback...');
+        try {
+          const directQuiz = await this.generateQuizDirectly();
+          if (directQuiz) {
+            console.log('✅ Direct AI generation successful');
+            return directQuiz;
+          }
+        } catch (directError) {
+          console.error('❌ Direct AI generation failed:', directError.message);
+        }
+        
+        console.log('🎲 Using demo quiz as final fallback');
+        return this.createDemoQuiz();
       }
     } catch (error) {
-      console.error('Error in generateDailyQuiz:', error);
-      throw new Error('Failed to generate daily quiz');
+      console.error('❌ Complete failure in generateDailyQuiz:', error);
+      console.log('🎲 Returning demo quiz as emergency fallback');
+      return this.createDemoQuiz();
     }
+  }
+
+  static async generateQuizDirectly(): Promise<DailyQuiz | null> {
+    try {
+      console.log('🤖 Attempting direct AI generation...');
+      
+      // Try OpenAI first
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (openaiKey) {
+        console.log('🔥 Trying OpenAI direct generation...');
+        try {
+          const quiz = await this.generateWithOpenAIDirect(openaiKey);
+          if (quiz) return quiz;
+        } catch (openaiError) {
+          console.error('❌ OpenAI direct failed:', openaiError.message);
+        }
+      }
+      
+      // Try Grok as fallback
+      const grokKey = process.env.GROK_API_KEY;
+      if (grokKey) {
+        console.log('🚀 Trying Grok AI as fallback...');
+        try {
+          const quiz = await this.generateWithGrokDirect(grokKey);
+          if (quiz) return quiz;
+        } catch (grokError) {
+          console.error('❌ Grok AI failed:', grokError.message);
+        }
+      }
+      
+      // Try Claude as final AI attempt
+      const claudeKey = process.env.CLAUDE_API_KEY;
+      if (claudeKey) {
+        console.log('🧠 Trying Claude as final AI attempt...');
+        try {
+          const quiz = await this.generateWithClaudeDirect(claudeKey);
+          if (quiz) return quiz;
+        } catch (claudeError) {
+          console.error('❌ Claude failed:', claudeError.message);
+        }
+      }
+      
+      console.log('❌ All AI providers failed');
+      return null;
+    } catch (error) {
+      console.error('❌ Direct AI generation error:', error);
+      return null;
+    }
+  }
+
+  private static async generateWithOpenAIDirect(apiKey: string): Promise<DailyQuiz | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const prompt = `Generate exactly 20 high-quality multiple-choice questions for Indian competitive exam preparation (UPSC, SSC, Banking).
+
+SUBJECT DISTRIBUTION (exactly):
+- History: 4 questions (Freedom Movement, Ancient India, Medieval India)
+- Polity: 4 questions (Constitution, Governance, Rights)
+- Geography: 3 questions (Physical, Economic, Indian Geography)
+- Economy: 3 questions (Indian Economy, Banking, Policies)
+- Science & Technology: 3 questions (Space, Defense, IT)
+- Current Affairs: 3 questions (Recent 6 months, Government Schemes)
+
+DIFFICULTY: 8 easy, 8 medium, 4 hard
+
+Return ONLY valid JSON:
+{
+  "questions": [
+    {
+      "question": "Question text",
+      "options": ["A", "B", "C", "D"],
+      "correct_answer": 0,
+      "explanation": "Detailed explanation",
+      "subject": "History|Polity|Geography|Economy|Science & Technology|Current Affairs",
+      "subtopic": "Specific subtopic",
+      "difficulty": "easy|medium|hard",
+      "points": 5
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert in Indian competitive exams. Generate high-quality questions for UPSC, SSC, Banking preparation.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 8000,
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const aiResponse = await response.json();
+    const content = JSON.parse(aiResponse.choices[0].message.content);
+    
+    if (!content.questions || !Array.isArray(content.questions)) {
+      throw new Error('Invalid questions format from OpenAI');
+    }
+
+    const questions = content.questions.slice(0, 20).map((q: any, index: number) => ({
+      id: `openai_${index + 1}`,
+      question: q.question,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      explanation: q.explanation,
+      subject: q.subject,
+      subtopic: q.subtopic,
+      difficulty: q.difficulty,
+      points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10)
+    }));
+
+    const quiz = {
+      id: `openai_quiz_${today}`,
+      date: today,
+      questions,
+      total_points: questions.reduce((sum, q) => sum + q.points, 0),
+      difficulty_distribution: {
+        easy: questions.filter(q => q.difficulty === 'easy').length,
+        medium: questions.filter(q => q.difficulty === 'medium').length,
+        hard: questions.filter(q => q.difficulty === 'hard').length
+      },
+      subjects_covered: [...new Set(questions.map(q => q.subject))],
+      generated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('✅ OpenAI generated quiz with', questions.length, 'questions');
+    return quiz;
+  }
+
+  private static async generateWithGrokDirect(apiKey: string): Promise<DailyQuiz | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const prompt = `Generate exactly 20 multiple-choice questions for Indian competitive exams (UPSC, SSC, Banking).
+
+Include questions from:
+- History (4): Freedom fighters, Ancient/Medieval India
+- Polity (4): Constitution, Governance
+- Geography (3): Physical features, Economic geography
+- Economy (3): Indian economy, Banking
+- Science & Technology (3): ISRO, Defense, IT
+- Current Affairs (3): Recent government schemes, international relations
+
+Difficulty: 8 easy, 8 medium, 4 hard questions
+
+Return JSON format:
+{
+  "questions": [
+    {
+      "question": "Question about Indian topics",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": 0,
+      "explanation": "Why this answer is correct",
+      "subject": "Subject name",
+      "subtopic": "Specific topic",
+      "difficulty": "easy|medium|hard",
+      "points": 5
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'grok-beta',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert in Indian education creating questions for competitive exam preparation. Focus on UPSC, SSC, Banking exam patterns.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 8000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Grok API error: ${response.status}`);
+    }
+
+    const grokResponse = await response.json();
+    const content = JSON.parse(grokResponse.choices[0].message.content);
+    
+    if (!content.questions || !Array.isArray(content.questions)) {
+      throw new Error('Invalid questions format from Grok');
+    }
+
+    const questions = content.questions.slice(0, 20).map((q: any, index: number) => ({
+      id: `grok_${index + 1}`,
+      question: q.question,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      explanation: q.explanation,
+      subject: q.subject,
+      subtopic: q.subtopic,
+      difficulty: q.difficulty,
+      points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10)
+    }));
+
+    const quiz = {
+      id: `grok_quiz_${today}`,
+      date: today,
+      questions,
+      total_points: questions.reduce((sum, q) => sum + q.points, 0),
+      difficulty_distribution: {
+        easy: questions.filter(q => q.difficulty === 'easy').length,
+        medium: questions.filter(q => q.difficulty === 'medium').length,
+        hard: questions.filter(q => q.difficulty === 'hard').length
+      },
+      subjects_covered: [...new Set(questions.map(q => q.subject))],
+      generated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('✅ Grok generated quiz with', questions.length, 'questions');
+    return quiz;
+  }
+
+  private static async generateWithClaudeDirect(apiKey: string): Promise<DailyQuiz | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const prompt = `Generate exactly 20 multiple-choice questions for Indian competitive exam preparation.
+
+Subject distribution:
+- History: 4 questions (Ancient India, Freedom Movement, Medieval India)
+- Polity: 4 questions (Constitution, Governance, Rights, Amendments)
+- Geography: 3 questions (Physical features, Economic geography, Indian states)
+- Economy: 3 questions (Indian economy, Banking, Government policies)
+- Science & Technology: 3 questions (ISRO missions, Defense, IT developments)
+- Current Affairs: 3 questions (Recent events, Government schemes, International relations)
+
+Difficulty: 8 easy, 8 medium, 4 hard
+
+Return JSON:
+{
+  "questions": [
+    {
+      "question": "Question text",
+      "options": ["A", "B", "C", "D"],
+      "correct_answer": 0,
+      "explanation": "Explanation",
+      "subject": "Subject",
+      "subtopic": "Subtopic",
+      "difficulty": "easy|medium|hard",
+      "points": 5
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 8000,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'user',
+            content: `You are an expert in Indian competitive exams. ${prompt}`
+          }
+        ]
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const claudeResponse = await response.json();
+    const content = JSON.parse(claudeResponse.content[0].text);
+    
+    if (!content.questions || !Array.isArray(content.questions)) {
+      throw new Error('Invalid questions format from Claude');
+    }
+
+    const questions = content.questions.slice(0, 20).map((q: any, index: number) => ({
+      id: `claude_${index + 1}`,
+      question: q.question,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      explanation: q.explanation,
+      subject: q.subject,
+      subtopic: q.subtopic,
+      difficulty: q.difficulty,
+      points: q.points || (q.difficulty === 'easy' ? 5 : q.difficulty === 'hard' ? 15 : 10)
+    }));
+
+    const quiz = {
+      id: `claude_quiz_${today}`,
+      date: today,
+      questions,
+      total_points: questions.reduce((sum, q) => sum + q.points, 0),
+      difficulty_distribution: {
+        easy: questions.filter(q => q.difficulty === 'easy').length,
+        medium: questions.filter(q => q.difficulty === 'medium').length,
+        hard: questions.filter(q => q.difficulty === 'hard').length
+      },
+      subjects_covered: [...new Set(questions.map(q => q.subject))],
+      generated_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('✅ Claude generated quiz with', questions.length, 'questions');
+    return quiz;
   }
 
   private static createDemoQuiz(): DailyQuiz {
@@ -620,27 +988,7 @@ export class SupabaseService {
         console.log('📝 No existing quiz found, generating with AI...');
         
         try {
-          // Call the daily-quiz-generator Edge Function
-          console.log('🤖 Calling daily-quiz-generator edge function...');
-          const { data, error } = await supabase.functions.invoke('daily-quiz-generator', {
-            body: { force: false }
-          });
-          
-          if (error) {
-            console.error('❌ Edge Function error:', error);
-            throw new Error('Edge Function failed');
-          }
-          
-          if (data?.success && data?.quiz) {
-            console.log('✅ Daily quiz generated successfully with AI:', {
-              questionsCount: data.quiz.questions?.length || 0,
-              subjects: data.quiz.subjects_covered || []
-            });
-            quiz = data.quiz;
-          } else {
-            console.error('❌ Invalid Edge Function response:', data);
-            throw new Error('Invalid response from Edge Function');
-          }
+          quiz = await this.generateDailyQuiz();
         } catch (edgeError) {
           console.error('⚠️ Edge Function failed, using demo quiz:', edgeError.message);
           quiz = this.createDemoQuiz();

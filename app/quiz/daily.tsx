@@ -116,15 +116,50 @@ export default function DailyQuizScreen() {
         return;
       }
 
-      // Skip limits check for now to test quiz loading
       console.log('👤 User authenticated:', user.id);
+
+      // Check user limits first
+      console.log('🔍 Checking user limits...');
+      const limits = await SupabaseService.checkUserLimits(user.id);
+      console.log('📊 User limits:', limits);
+      
+      if (!limits.canTakeQuiz) {
+        console.log('❌ User cannot take quiz - limit reached');
+        if (!isMounted.current) return;
+        Alert.alert(
+          'Daily Limit Reached',
+          `You've used all ${limits.dailyLimit} free quizzes today. Upgrade to Premium for unlimited access!`,
+          [
+            { text: 'Maybe Later', onPress: () => router.back() },
+            { text: 'Upgrade Now', onPress: () => router.push('/subscription') }
+          ]
+        );
+        return;
+      }
 
       // Get today's quiz (will generate if doesn't exist)
       console.log('🔍 Calling ensureTodayQuiz...');
       const dailyQuiz = await SupabaseService.ensureTodayQuiz();
       
+      console.log('📋 Quiz retrieval result:', {
+        quizExists: !!dailyQuiz,
+        questionsCount: dailyQuiz?.questions?.length || 0,
+        quizId: dailyQuiz?.id || 'No ID',
+        quizDate: dailyQuiz?.date || 'No date'
+      });
+      
       if (!dailyQuiz) {
+        console.error('❌ No quiz returned from ensureTodayQuiz');
         throw new Error('Failed to load or generate daily quiz');
+      }
+      
+      if (!dailyQuiz.questions || !Array.isArray(dailyQuiz.questions) || dailyQuiz.questions.length === 0) {
+        console.error('❌ Quiz has no questions:', {
+          hasQuestions: !!dailyQuiz.questions,
+          isArray: Array.isArray(dailyQuiz.questions),
+          length: dailyQuiz.questions?.length || 0
+        });
+        throw new Error('Quiz has no questions');
       }
       
       if (!isMounted.current) return;
@@ -139,8 +174,14 @@ export default function DailyQuizScreen() {
     } catch (error) {
       console.error('❌ Error loading daily quiz:', error);
       if (!isMounted.current) return;
-      Alert.alert('Error', 'Failed to load daily quiz. Please check your internet connection and try again.');
-      router.back();
+      Alert.alert(
+        'Quiz Loading Error', 
+        `Failed to load daily quiz: ${error.message}. Please check your internet connection and try again.`,
+        [
+          { text: 'Retry', onPress: () => loadDailyQuiz() },
+          { text: 'Go Back', onPress: () => router.back() }
+        ]
+      );
     } finally {
       if (!isMounted.current) return;
       setIsLoading(false);
