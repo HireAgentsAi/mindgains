@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import 'react-native-url-polyfill/auto'
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://iyguhaxhomtcjafvfupu.supabase.co'
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5Z3VoYXhob210Y2phZnZmdXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjU4NzQsImV4cCI6MjA1MTUwMTg3NH0.Qs8Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7E'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -292,21 +292,15 @@ export class SupabaseService {
 
   static async getCurrentUser() {
     try {
-      // Check if Supabase is properly configured
-      if (!supabaseUrl || !supabaseAnonKey) {
-        console.log('Supabase not configured, using demo mode');
-        return null;
-      }
-      
       const { data: { user }, error } = await supabase.auth.getUser()
-      if (error && error.message !== 'Auth session missing!') {
-        console.log('Supabase auth error:', error.message);
-        return null;
+      if (error) {
+        console.error('Auth error:', error.message);
+        throw error;
       }
       return user;
     } catch (error) {
-      console.log('Supabase connection error:', error);
-      return null;
+      console.error('Error getting current user:', error);
+      throw error;
     }
   }
 
@@ -398,13 +392,7 @@ export class SupabaseService {
     try {
       console.log('Calling daily-quiz-generator edge function...');
       
-      // Add timeout and better error handling
-      const { data, error } = await Promise.race([
-        supabase.functions.invoke('daily-quiz-generator'),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Edge function timeout')), 10000)
-        )
-      ]) as any;
+      const { data, error } = await supabase.functions.invoke('daily-quiz-generator');
       
       if (error) {
         console.error('Edge function error:', error);
@@ -415,8 +403,7 @@ export class SupabaseService {
       return data.quiz;
     } catch (error) {
       console.error('Error generating daily quiz:', error);
-      // Return null to trigger fallback in ensureTodayQuiz
-      return null;
+      throw error;
     }
   }
 
@@ -449,7 +436,6 @@ export class SupabaseService {
       
       if (!quiz) {
         console.log('No existing quiz found, generating new one...');
-        // Generate new quiz using edge function
         quiz = await this.generateDailyQuiz();
       }
       
@@ -760,16 +746,11 @@ export class SupabaseService {
   // Leaderboard
   static async getLeaderboard(timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'weekly') {
     try {
-      // Check if Supabase is configured
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        return [];
-      }
-      
       const { data, error } = await supabase
         .from('user_stats')
         .select(`
           *,
-          profiles!user_stats_user_id_fkey (
+          profiles (
             full_name,
             avatar_url
           )
@@ -779,13 +760,13 @@ export class SupabaseService {
 
       if (error) {
         console.error('Error fetching leaderboard:', error)
-        return []
+        throw error
       }
 
       return data || []
     } catch (error) {
       console.error('Error in getLeaderboard:', error)
-      return []
+      throw error
     }
   }
 
