@@ -465,6 +465,81 @@ async function checkDailyQuizAchievements(supabaseClient: any, userId: string, s
   return newAchievements
 }
 
+async function generateGrokResponse(scorePercentage: number, correctAnswers: number, totalQuestions: number): Promise<string> {
+  try {
+    const grokApiKey = Deno.env.get('GROK_API_KEY');
+    
+    if (!grokApiKey) {
+      console.log('⚠️ Grok API key not available, using fallback');
+      return getFallbackGrokMessage(scorePercentage);
+    }
+
+    const prompt = `You are Grok, the witty AI assistant. A student just completed an Indian competitive exam daily quiz with ${correctAnswers}/${totalQuestions} correct answers (${scorePercentage}%).
+
+Generate a witty, encouraging, and culturally relevant response that:
+1. References Indian culture, history, or current events humorously
+2. Is encouraging but realistic about their performance
+3. Includes relevant emojis
+4. Keeps it under 150 characters
+5. Has your signature wit and humor
+
+Make it specific to their ${scorePercentage}% score and Indian context.`;
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${grokApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'grok-beta',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are Grok, known for witty, humorous responses with cultural references. Keep responses brief and encouraging.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.9,
+        max_tokens: 200,
+      }),
+    });
+
+    if (response.ok) {
+      const grokResponse = await response.json();
+      const message = grokResponse.choices[0].message.content.trim();
+      console.log('🤖 Grok response generated:', message);
+      return message;
+    } else {
+      console.log('⚠️ Grok API failed, using fallback');
+      return getFallbackGrokMessage(scorePercentage);
+    }
+  } catch (error) {
+    console.error('Error generating Grok response:', error);
+    return getFallbackGrokMessage(scorePercentage);
+  }
+}
+
+function getFallbackGrokMessage(percentage: number): string {
+  if (percentage === 100) {
+    return "🎯 Perfect score! You're basically a walking encyclopedia of Indian knowledge! Time to challenge Einstein! 🧠✨";
+  } else if (percentage >= 90) {
+    return "🌟 Outstanding! You're so smart, even Google would ask you for answers! Keep this momentum going! 🚀";
+  } else if (percentage >= 80) {
+    return "💪 Excellent work! You're crushing it like Bhagat Singh crushed the British morale! 🇮🇳";
+  } else if (percentage >= 70) {
+    return "📚 Good job! You're on the right track - just need to channel your inner Chandragupta Maurya! 👑";
+  } else if (percentage >= 60) {
+    return "🎯 Not bad! Rome wasn't built in a day, and neither was the Taj Mahal. Keep practicing! 🏛️";
+  } else if (percentage >= 50) {
+    return "🤔 Hmm, looks like you need to spend more time with books than with Netflix! But hey, we all start somewhere! 📖";
+  } else {
+    return "😅 Well, at least you showed up! That's more than what some Mughal emperors did for their empire! Try again tomorrow! 💪";
+  }
+}
 async function unlockAchievement(supabaseClient: any, userId: string, achievementName: string, newAchievements: any[]) {
   // Check if already unlocked
   const { data: existing } = await supabaseClient

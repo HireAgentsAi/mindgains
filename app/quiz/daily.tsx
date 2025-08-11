@@ -1071,6 +1071,55 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textAlign: 'center',
   },
+  grokMessageContainer: {
+    width: '100%',
+    marginTop: theme.spacing.lg,
+  },
+  grokMessageCard: {
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  grokMessageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  grokMessageIcon: {
+    fontSize: 20,
+  },
+  grokMessageTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.accent.purple,
+  },
+  grokMessageText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text.primary,
+    lineHeight: 20,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  xpRewardContainer: {
+    marginTop: theme.spacing.md,
+  },
+  xpRewardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    gap: theme.spacing.sm,
+    ...theme.shadows.card,
+  },
+  xpRewardText: {
+    fontSize: 18,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+  },
   resultsStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
