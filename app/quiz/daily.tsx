@@ -284,6 +284,40 @@ export default function DailyQuizScreen() {
       }
       
       setIsCompleted(true);
+    } catch (error) {
+      console.error('❌ Error submitting quiz:', error);
+      
+      if (!isMounted.current) return;
+      
+      // Create local results as fallback
+      const correctCount = userAnswers.filter((answer, index) => 
+        answer === quiz.questions[index].correct_answer
+      ).length;
+      const percentage = Math.round((correctCount / quiz.questions.length) * 100);
+      
+      const fallbackResults = {
+        correct_answers: correctCount,
+        total_questions: quiz.questions.length,
+        score_percentage: percentage,
+        total_points: correctCount * 10,
+        time_spent: timeSpent,
+        xp_earned: correctCount * 5,
+        grok_message: getGrokMessage(percentage, correctCount, quiz.questions.length)
+      };
+      
+      setResults(fallbackResults);
+      setIsCompleted(true);
+      
+      Alert.alert(
+        '🎉 Quiz Complete!',
+        `You scored ${percentage}%!\n\n${fallbackResults.grok_message}`,
+        [{ text: 'View Results', onPress: () => {} }]
+      );
+    } finally {
+      if (isMounted.current) {
+        setIsSubmitting(false);
+      }
+    }
   };
 
   const getGrokMessage = (percentage: number, correct: number, total: number): string => {
