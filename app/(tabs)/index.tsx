@@ -636,7 +636,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: 20,
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
