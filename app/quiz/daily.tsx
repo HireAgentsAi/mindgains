@@ -148,10 +148,83 @@ export default function DailyQuizScreen() {
               difficulty: 'medium',
               points: 10,
             },
-    
+          ],
           total_points: 25,
           difficulty_distribution: { easy: 1, medium: 2, hard: 0 },
           subjects_covered: ['History', 'Polity', 'Geography'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        };
+        
+        setQuiz(demoQuiz);
+        setUserAnswers(new Array(demoQuiz.questions.length).fill(-1));
+      } else {
+        setQuiz(dailyQuiz);
+        setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
+      }
+    } catch (error) {
+      console.error('Error loading daily quiz:', error);
+      // Don't show alert, just use demo data
+      if (!isMounted.current) return;
+      
+      // Final fallback quiz
+      const errorFallbackQuiz: DailyQuiz = {
+        id: 'error-fallback-quiz',
+        date: new Date().toISOString().split('T')[0],
+        questions: [
+          {
+            id: 'dq1',
+            question: 'What is the capital of India?',
+            options: ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
+            correct_answer: 1,
+            explanation: 'New Delhi is the capital city of India.',
+            subject: 'Geography',
+            subtopic: 'Indian Geography',
+            difficulty: 'easy',
+            points: 10,
+          },
+        ],
+        total_points: 10,
+        difficulty_distribution: { easy: 1, medium: 0, hard: 0 },
+        subjects_covered: ['Geography'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+      
+      setQuiz(errorFallbackQuiz);
+      setUserAnswers(new Array(errorFallbackQuiz.questions.length).fill(-1));
+    } finally {
+      if (!isMounted.current) return;
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnswerSelect = (answerIndex: number) => {
+    if (showExplanation) return;
+    
+    setSelectedAnswer(answerIndex);
+    
+    // Update user answers array
+    const newAnswers = [...userAnswers];
+    newAnswers[currentQuestionIndex] = answerIndex;
+    setUserAnswers(newAnswers);
+    
+    // Animate option selection
+    optionScale.value = withSequence(
+      withTiming(0.95, { duration: 100 }),
+      withTiming(1, { duration: 200 })
+    );
+  };
+
+  const handleSubmitAnswer = () => {
+    if (selectedAnswer === null) return;
+    
+    setShowExplanation(true);
+    
+    // Animate mascot based on answer correctness
+    const isCorrect = selectedAnswer === quiz!.questions[currentQuestionIndex].correct_answer;
+    mascotScale.value = withSequence(
+      withTiming(1.2, { duration: 300 }),
       withTiming(1, { duration: 200 })
     );
   };
@@ -183,11 +256,25 @@ export default function DailyQuizScreen() {
           correct_answers: correctCount,
           total_questions: quiz.questions.length,
           score_percentage: Math.round((correctCount / quiz.questions.length) * 100),
+          time_spent: timeSpent,
+          total_points: quiz.total_points,
+          questions: quiz.questions.map((q, index) => ({
+            question: q.question,
+            user_answer: userAnswers[index],
+            correct_answer: q.correct_answer,
             is_correct: userAnswers[index] === q.correct_answer,
             explanation: q.explanation,
+          })),
+        };
+        
+        setResults(demoResults);
+        setIsCompleted(true);
       } else {
-      setQuiz(dailyQuiz);
-      setUserAnswers(new Array(dailyQuiz.questions.length).fill(-1));
+        // Real submission
+        const result = await SupabaseService.submitDailyQuiz(quiz.id, userAnswers, timeSpent);
+        setResults(result);
+        setIsCompleted(true);
+      }
     } catch (error) {
       console.error('Error submitting quiz:', error);
       Alert.alert('Error', 'Failed to submit quiz. Please try again.');
@@ -200,36 +287,10 @@ export default function DailyQuizScreen() {
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-      console.error('Error loading daily quiz:', error);
-      // Don't show alert, just use demo data
-      if (!isMounted.current) return;
-      
-      // Final fallback quiz
-      const errorFallbackQuiz: DailyQuiz = {
-        id: 'error-fallback-quiz',
-        date: new Date().toISOString().split('T')[0],
-        questions: [
-          {
-            id: 'dq1',
-            question: 'What is the capital of India?',
-            options: ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
-            correct_answer: 1,
-            explanation: 'New Delhi is the capital city of India.',
-            subject: 'Geography',
-            subtopic: 'Indian Geography',
-            difficulty: 'easy',
-            points: 10,
-          },
-        ],
-        total_points: 10,
-        difficulty_distribution: { easy: 1, medium: 0, hard: 0 },
-        subjects_covered: ['Geography'],
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-      
-      setQuiz(errorFallbackQuiz);
-      setUserAnswers(new Array(errorFallbackQuiz.questions.length).fill(-1));
+      setSelectedAnswer(userAnswers[currentQuestionIndex - 1] !== -1 ? userAnswers[currentQuestionIndex - 1] : null);
+      setShowExplanation(false);
+    } else {
+      router.back();
     }
   };
 
