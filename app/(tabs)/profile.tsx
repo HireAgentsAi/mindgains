@@ -196,19 +196,6 @@ export default function Profile() {
     );
   };
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await SupabaseService.signOut();
-      router.replace('/auth');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
-
   const handleShareProfile = async () => {
     if (!userStats || !userProfile) return;
     
@@ -578,6 +565,24 @@ Join India's #1 AI learning platform:
                   isDestructive
                 />
               </View>
+
+              {/* Sign Out Button */}
+              <TouchableOpacity
+                style={styles.signOutButton}
+                onPress={handleSignOut}
+                disabled={isSigningOut}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[theme.colors.accent.red + '20', theme.colors.accent.pink + '20']}
+                  style={styles.signOutGradient}
+                >
+                  <LogOut size={20} color={theme.colors.accent.red} />
+                  <Text style={styles.signOutText}>
+                    {isSigningOut ? 'Signing out...' : 'Sign Out'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
         </ScrollView>
       </View>
@@ -1209,5 +1214,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: theme.fonts.caption,
     color: theme.colors.text.secondary,
+  },
+  signOutButton: {
+    marginTop: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  signOutGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.accent.red + '30',
+  },
+  signOutText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.accent.red,
   },
 });
