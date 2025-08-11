@@ -436,7 +436,7 @@ export default function Home() {
             <View style={styles.statsSection}>
               <Text style={styles.sectionTitle}>
                 <FontAwesome5 name="chart-pie" size={18} color={theme.colors.accent.blue} solid />
-                <Text> Your Progress</Text>
+                <Text>Your Progress</Text>
               </Text>
               
               <View style={styles.statsGrid}>
