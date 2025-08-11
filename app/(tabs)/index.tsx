@@ -280,106 +280,6 @@ export default function Home() {
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       <View style={styles.safeArea}>
-        {/* Enhanced Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.greetingSection}>
-              <Text style={styles.greeting}>{greeting}!</Text>
-              <Text style={styles.subtitle}>Ready to gain some mind power?</Text>
-            </View>
-            
-            <View style={styles.headerRight}>
-              <Animated.View style={mascotAnimatedStyle}>
-                <MascotAvatar
-                  size={60}
-                  animated={true}
-                  glowing={true}
-                  mood="happy"
-                />
-              </Animated.View>
-              
-              <LinearGradient
-                colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
-                style={styles.brainContainer}
-              >
-                <FontAwesome5 name="brain" size={24} color={theme.colors.text.primary} solid />
-              </LinearGradient>
-            </View>
-          </View>
-          
-          {/* Mascot Recommendations */}
-          {mascotRecommendations.length > 0 && (
-            <View style={styles.recommendationBubble}>
-              <LinearGradient
-                colors={[theme.colors.background.glass, theme.colors.background.card]}
-                style={styles.recommendationGradient}
-              >
-                <FontAwesome5 name="lightbulb" size={14} color={theme.colors.accent.yellow} solid />
-                <Text style={styles.recommendationText}>
-                  {mascotRecommendations[currentRecommendation]}
-                </Text>
-              </LinearGradient>
-            </View>
-          )}
-        </View>
-
-        {/* Enhanced Progress Card */}
-        <Animated.View style={[styles.progressSection, progressAnimatedStyle]}>
-          <LinearGradient
-            colors={[theme.colors.accent.purple, theme.colors.accent.blue, theme.colors.accent.cyan]}
-            style={styles.progressCard}
-          >
-            {/* Shimmer effect */}
-            <View style={styles.shimmerContainer}>
-              <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
-                <LinearGradient
-                  colors={['transparent', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.2)', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.shimmerGradient}
-                />
-              </Animated.View>
-            </View>
-            
-            <View style={styles.progressContent}>
-              <View style={styles.levelRow}>
-                <View style={styles.levelBadge}>
-                  <FontAwesome5 name="crown" size={16} color={theme.colors.text.primary} solid />
-                  <Text style={styles.levelText}>Level {userStats.currentLevel}</Text>
-                </View>
-                
-                <Animated.View style={[styles.streakBadge, streakAnimatedStyle]}>
-                  <FontAwesome5 name="fire" size={14} color={theme.colors.text.primary} solid />
-                  <Text style={styles.streakText}>{userStats.streakDays}</Text>
-                </Animated.View>
-              </View>
-              
-              <View style={styles.xpSection}>
-                <Text style={styles.xpText}>
-                  {userStats.totalXP.toLocaleString()} XP
-                </Text>
-                <Text style={styles.rankText}>
-                  <FontAwesome5 name="chart-line" size={12} color={theme.colors.text.primary} solid />
-                  {' '}Rank #{userStats.rank}
-                </Text>
-              </View>
-              
-              <View style={styles.progressBarSection}>
-                <View style={styles.progressBar}>
-                  <LinearGradient
-                    colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
-                    style={[styles.progressFill, { width: '65%' }]}
-                  />
-                </View>
-                <Text style={styles.progressLabel}>
-                  <FontAwesome5 name="arrow-up" size={10} color={theme.colors.text.primary} solid />
-                  {' '}450 XP to Level {userStats.currentLevel + 1}
-                </Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
         {/* Enhanced Content */}
         <Animated.View style={[styles.content, animatedStyle]}>
           <ScrollView
@@ -394,6 +294,106 @@ export default function Home() {
             }
             contentContainerStyle={styles.scrollContent}
           >
+            {/* Enhanced Header */}
+            <View style={styles.header}>
+              <View style={styles.headerContent}>
+                <View style={styles.greetingSection}>
+                  <Text style={styles.greeting}>{greeting}!</Text>
+                  <Text style={styles.subtitle}>Ready to gain some mind power?</Text>
+                </View>
+                
+                <View style={styles.headerRight}>
+                  <Animated.View style={mascotAnimatedStyle}>
+                    <MascotAvatar
+                      size={60}
+                      animated={true}
+                      glowing={true}
+                      mood="happy"
+                    />
+                  </Animated.View>
+                  
+                  <LinearGradient
+                    colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+                    style={styles.brainContainer}
+                  >
+                    <FontAwesome5 name="brain" size={24} color={theme.colors.text.primary} solid />
+                  </LinearGradient>
+                </View>
+              </View>
+              
+              {/* Mascot Recommendations */}
+              {mascotRecommendations.length > 0 && (
+                <View style={styles.recommendationBubble}>
+                  <LinearGradient
+                    colors={[theme.colors.background.glass, theme.colors.background.card]}
+                    style={styles.recommendationGradient}
+                  >
+                    <FontAwesome5 name="lightbulb" size={14} color={theme.colors.accent.yellow} solid />
+                    <Text style={styles.recommendationText}>
+                      {mascotRecommendations[currentRecommendation]}
+                    </Text>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+
+            {/* Enhanced Progress Card */}
+            <Animated.View style={[styles.progressSection, progressAnimatedStyle]}>
+              <LinearGradient
+                colors={[theme.colors.accent.purple, theme.colors.accent.blue, theme.colors.accent.cyan]}
+                style={styles.progressCard}
+              >
+                {/* Shimmer effect */}
+                <View style={styles.shimmerContainer}>
+                  <Animated.View style={[styles.shimmerOverlay, shimmerAnimatedStyle]}>
+                    <LinearGradient
+                      colors={['transparent', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.2)', 'transparent']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.shimmerGradient}
+                    />
+                  </Animated.View>
+                </View>
+                
+                <View style={styles.progressContent}>
+                  <View style={styles.levelRow}>
+                    <View style={styles.levelBadge}>
+                      <FontAwesome5 name="crown" size={16} color={theme.colors.text.primary} solid />
+                      <Text style={styles.levelText}>Level {userStats.currentLevel}</Text>
+                    </View>
+                    
+                    <Animated.View style={[styles.streakBadge, streakAnimatedStyle]}>
+                      <FontAwesome5 name="fire" size={14} color={theme.colors.text.primary} solid />
+                      <Text style={styles.streakText}>{userStats.streakDays}</Text>
+                    </Animated.View>
+                  </View>
+                  
+                  <View style={styles.xpSection}>
+                    <Text style={styles.xpText}>
+                      {userStats.totalXP.toLocaleString()} XP
+                    </Text>
+                    <Text style={styles.rankText}>
+                      <FontAwesome5 name="chart-line" size={12} color={theme.colors.text.primary} solid />
+                      {' '}Rank #{userStats.rank}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.progressBarSection}>
+                    <View style={styles.progressBar}>
+                      <LinearGradient
+                        colors={[theme.colors.accent.yellow, theme.colors.accent.green]}
+                        style={[styles.progressFill, { width: '65%' }]}
+                      />
+                    </View>
+                    <Text style={styles.progressLabel}>
+                      <FontAwesome5 name="arrow-up" size={10} color={theme.colors.text.primary} solid />
+                      {' '}450 XP to Level {userStats.currentLevel + 1}
+                    </Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+
             {/* Enhanced Stats Grid */}
             <View style={styles.statsSection}>
               <Text style={styles.sectionTitle}>

@@ -872,24 +872,34 @@ export class SupabaseService {
 
   // Leaderboard
   static async getLeaderboard(timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time' = 'weekly') {
-    const { data, error } = await supabase
-      .from('user_stats')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          avatar_url
-        )
-      `)
-      .order('total_xp', { ascending: false })
-      .limit(100)
+    try {
+      // Check if Supabase is configured
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('user_stats')
+        .select(`
+          *,
+          profiles!user_stats_user_id_fkey (
+            full_name,
+            avatar_url
+          )
+        `)
+        .order('total_xp', { ascending: false })
+        .limit(100)
 
-    if (error) {
-      console.error('Error fetching leaderboard:', error)
-      throw error
+      if (error) {
+        console.error('Error fetching leaderboard:', error)
+        return []
+      }
+
+      return data || []
+    } catch (error) {
+      console.error('Error in getLeaderboard:', error)
+      return []
     }
-
-    return data || []
   }
 
   // Analytics for marketing
