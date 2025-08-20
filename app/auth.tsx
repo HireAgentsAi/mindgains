@@ -35,8 +35,8 @@ const { width = 375, height = 667 } = Dimensions.get('window') || {};
 export default function AuthScreen() {
   const isMounted = useRef(true);
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('ragularvind84@gmail.com');
+  const [password, setPassword] = useState('Test123!@#');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);

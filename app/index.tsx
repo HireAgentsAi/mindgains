@@ -109,6 +109,7 @@ export default function SplashScreen() {
         const user = await SupabaseService.getCurrentUser();
         
         if (user) {
+          console.log('✅ User authenticated, navigating to tabs');
           if (!isMounted.current) return;
           setTimeout(() => {
             if (!isMounted.current) return;
@@ -118,6 +119,7 @@ export default function SplashScreen() {
         }
         
         // Navigate to auth screen
+        console.log('❌ No user found, navigating to auth');
         if (!isMounted.current) return;
         setTimeout(() => {
           if (!isMounted.current) return;

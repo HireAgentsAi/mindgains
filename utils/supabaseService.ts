@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import 'react-native-url-polyfill/auto'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://iyguhaxhomtcjafvfupu.supabase.co'
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5Z3VoYXhob210Y2phZnZmdXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MjU4NzQsImV4cCI6MjA1MTUwMTg3NH0.Qs8Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7Ej7E'
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5Z3VoYXhob210Y2phZnZmdXB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMjgzNTAsImV4cCI6MjA2OTgwNDM1MH0.rnit3edoub7Xq5rJHZmNDDwjgLTWC_Zc7LdF9xA8hMw'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -1971,16 +1971,21 @@ Return JSON:
   // Edge Function Helper
   static async callEdgeFunction(functionName: string, payload: any) {
     try {
+      console.log(`🚀 Calling edge function: ${functionName}`);
+      console.log(`📦 Payload:`, payload);
+      
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: payload
       });
+
+      console.log(`📥 Response from ${functionName}:`, { data, error });
 
       if (error) {
         console.error(`Edge function ${functionName} error:`, error);
         throw error;
       }
 
-      return data;
+      return { data, error: null };
     } catch (error) {
       console.error(`Failed to call ${functionName}:`, error);
       throw error;

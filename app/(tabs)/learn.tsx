@@ -148,6 +148,13 @@ export default function Learn() {
       setIsProcessing(true);
       console.log('⏳ Processing started...');
       
+      // Check if user is authenticated
+      const user = await SupabaseService.getCurrentUser();
+      if (!user) {
+        Alert.alert('Authentication Required', 'Please log in to create content.');
+        return;
+      }
+      
       const missionData = {
         title: config.title || config.topic || 'Text-based Learning',
         description: config.description || (config.title ? `Learn about ${config.title}` : 'Custom text learning mission'),
@@ -165,14 +172,28 @@ export default function Learn() {
       const result = await SupabaseService.createMission(missionData);
       console.log('✅ Mission created successfully:', result);
       
-      setShowTextModal(false);
-      console.log('🔄 Refreshing subjects list...');
+      const missionId = result?.id || result?.mission?.id;
       
-      // Navigate to the mission or refresh the subjects list
-      await loadSubjects();
-      console.log('✅ Subjects refreshed');
-      
-      Alert.alert('Success', 'Learning mission created successfully!');
+      if (missionId) {
+        setShowTextModal(false);
+        
+        // Navigate to content viewer with the mission ID
+        console.log('🚀 Navigating to content viewer with ID:', missionId);
+        
+        // Small delay for smooth transition
+        setTimeout(() => {
+          router.push({
+            pathname: '/learn/content-viewer',
+            params: {
+              contentId: missionId,
+              contentType: 'text',
+              source: 'smart-text',
+            },
+          });
+        }, 500);
+      } else {
+        throw new Error('No mission ID returned from createMission');
+      }
       
     } catch (error) {
       console.error('❌ Error creating text mission:', error);
@@ -237,6 +258,44 @@ export default function Learn() {
     transform: [{ translateY: interpolate(fadeIn.value, [0, 1], [30, 0]) }],
   }));
 
+  const handlePDFContentExtracted = async (text: string, analysis: any, metadata: any) => {
+    try {
+      setIsProcessing(true);
+      
+      // Process and display the PDF content for user review
+      console.log('PDF content:', text);
+      console.log('PDF metadata:', metadata);
+      
+      setShowPDFModal(false);
+      
+      // Navigate to content viewer if mission was created
+      if (metadata?.missionId) {
+        router.push({
+          pathname: '/learn/content-viewer',
+          params: {
+            contentId: metadata.missionId,
+            contentType: 'pdf',
+            source: 'pdf',
+          },
+        });
+      } else {
+        // Show success message as fallback
+        const fileName = metadata?.fileMetadata?.fileName || 'Document';
+        Alert.alert(
+          'PDF Processed',
+          `Successfully extracted content from: ${fileName}`,
+          [{ text: 'OK' }]
+        );
+      }
+      
+    } catch (error) {
+      console.error('Error processing PDF content:', error);
+      Alert.alert('Error', 'Failed to process the PDF. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleTextExtracted = async (text: string, analysis: any, metadata?: any) => {
     try {
       setIsProcessing(true);
@@ -247,14 +306,13 @@ export default function Learn() {
       
       // Close modals
       setShowCameraModal(false);
-      setShowPDFModal(false);
       
       // Show success message with extracted content preview
-      alert(`Successfully extracted text:\n\n${text.slice(0, 200)}${text.length > 200 ? '...' : ''}`);
+      Alert.alert('Text Extracted', `Successfully extracted text:\n\n${text.slice(0, 200)}${text.length > 200 ? '...' : ''}`);
       
     } catch (error) {
       console.error('Error processing extracted text:', error);
-      alert('Failed to process the content. Please try again.');
+      Alert.alert('Error', 'Failed to process the content. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -270,13 +328,29 @@ export default function Learn() {
       
       setShowYouTubeModal(false);
       
-      // Show success message with video info
-      const videoTitle = metadata?.videoMetadata?.title || 'Video';
-      alert(`Successfully processed YouTube video:\n\n${videoTitle}\n\nContent extracted: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`);
+      // Navigate to content viewer if mission was created
+      if (metadata?.missionId) {
+        router.push({
+          pathname: '/learn/content-viewer',
+          params: {
+            contentId: metadata.missionId,
+            contentType: 'youtube',
+            source: 'youtube',
+          },
+        });
+      } else {
+        // Show success message as fallback
+        const videoTitle = metadata?.videoMetadata?.title || 'Video';
+        Alert.alert(
+          'Video Processed',
+          `Successfully extracted content from: ${videoTitle}`,
+          [{ text: 'OK' }]
+        );
+      }
       
     } catch (error) {
       console.error('Error processing YouTube content:', error);
-      alert('Failed to process the video. Please try again.');
+      Alert.alert('Error', 'Failed to process the video. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -490,7 +564,7 @@ export default function Learn() {
         <PDFUploadModal
           visible={showPDFModal}
           onClose={() => setShowPDFModal(false)}
-          onTextExtracted={handleTextExtracted}
+          onContentExtracted={handlePDFContentExtracted}
         />
       )}
 

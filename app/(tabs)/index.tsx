@@ -135,25 +135,29 @@ export default function Home() {
         return;
       }
 
-      const [stats, recommendations] = await Promise.all([
+      const [stats, recommendations] = await Promise.allSettled([
         SupabaseService.getUserStats(user.id),
         SupabaseService.getMascotRecommendations(user.id)
       ]);
+      
+      // Extract successful results
+      const userStats = stats.status === 'fulfilled' ? stats.value : null;
+      const mascotRecs = recommendations.status === 'fulfilled' ? recommendations.value : [];
 
       if (!isMounted.current) return;
 
-      if (stats) {
+      if (userStats) {
         setUserStats({
-          currentLevel: stats.current_level,
-          totalXP: stats.total_xp,
-          streakDays: stats.streak_days,
+          currentLevel: userStats.current_level,
+          totalXP: userStats.total_xp,
+          streakDays: userStats.streak_days,
           totalQuizzes: 0, // Will be calculated from real data
           accuracy: 0, // Will be calculated from real data
           rank: 0, // Will be calculated from real data
         });
       }
       
-      setMascotRecommendations(recommendations);
+      setMascotRecommendations(mascotRecs);
     } catch (error) {
       console.error('Error loading user data:', error);
       if (!isMounted.current) return;

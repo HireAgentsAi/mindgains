@@ -8,15 +8,11 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { X, Sparkles, BookOpen, Users, Award, Zap } from 'lucide-react-native';
+import { X, Sparkles, BookOpen, Users, Award, Zap, Loader } from 'lucide-react-native';
 import { theme } from '@/constants/theme';
 import GradientButton from './GradientButton';
 
@@ -26,13 +22,6 @@ interface ContentGenerationModalProps {
   onGenerate: (config: any) => void;
   contentType?: string | null;
   isLoading?: boolean;
-}
-
-interface GenerationConfig {
-  topic: string;
-  contentType: 'historical_period' | 'constitution' | 'geography' | 'science' | 'literature' | 'general';
-  examFocus: 'upsc' | 'ssc' | 'banking' | 'state_pcs' | 'neet' | 'jee' | 'general';
-  subject?: string;
 }
 
 const contentTypes = [
@@ -50,99 +39,81 @@ const contentTypes = [
     description: 'Articles, amendments, parts',
     icon: <Award size={24} color={theme.colors.text.primary} />,
     color: theme.colors.accent.blue,
-    examples: ['Fundamental Rights', 'DPSP', 'Emergency Provisions']
+    examples: ['Fundamental Rights', 'DPSP', 'Union Executive']
   },
   {
     id: 'geography',
     title: 'Geography',
-    description: 'Physical, economic, political',
-    icon: <Users size={24} color={theme.colors.text.primary} />,
+    description: 'Physical, human, economic',
+    icon: <Zap size={24} color={theme.colors.text.primary} />,
     color: theme.colors.accent.green,
-    examples: ['Indian Rivers', 'Climate', 'Minerals']
+    examples: ['Monsoon System', 'River Systems', 'Mineral Resources']
   },
   {
     id: 'science',
     title: 'Science',
     description: 'Physics, chemistry, biology',
     icon: <Zap size={24} color={theme.colors.text.primary} />,
-    color: theme.colors.accent.yellow,
-    examples: ['Photosynthesis', 'Atomic Structure', 'Laws of Motion']
+    color: theme.colors.accent.cyan,
+    examples: ['Photosynthesis', 'Newton Laws', 'Chemical Reactions']
+  },
+  {
+    id: 'literature',
+    title: 'Literature',
+    description: 'Authors, works, movements',
+    icon: <BookOpen size={24} color={theme.colors.text.primary} />,
+    color: theme.colors.accent.pink,
+    examples: ['Shakespeare', 'Tagore', 'Premchand']
   },
   {
     id: 'general',
-    title: 'General Topic',
-    description: 'Any other topic',
-    icon: <Sparkles size={24} color={theme.colors.text.primary} />,
-    color: theme.colors.accent.pink,
-    examples: ['Current Affairs', 'Economics', 'Polity']
+    title: 'General',
+    description: 'Any topic or subject',
+    icon: <Users size={24} color={theme.colors.text.primary} />,
+    color: theme.colors.accent.yellow,
+    examples: ['Current Affairs', 'Economics', 'Technology']
   }
 ];
 
 const examTypes = [
-  { id: 'upsc', title: 'UPSC', description: 'Civil Services' },
-  { id: 'ssc', title: 'SSC', description: 'Staff Selection' },
-  { id: 'banking', title: 'Banking', description: 'Bank Exams' },
-  { id: 'state_pcs', title: 'State PCS', description: 'State Services' },
-  { id: 'neet', title: 'NEET', description: 'Medical Entrance' },
-  { id: 'jee', title: 'JEE', description: 'Engineering Entrance' },
-  { id: 'general', title: 'General', description: 'All Competitive' }
+  { id: 'upsc', title: 'UPSC', color: theme.colors.accent.purple },
+  { id: 'ssc', title: 'SSC', color: theme.colors.accent.blue },
+  { id: 'banking', title: 'Banking', color: theme.colors.accent.green },
+  { id: 'state_pcs', title: 'State PCS', color: theme.colors.accent.yellow },
+  { id: 'neet', title: 'NEET', color: theme.colors.accent.pink },
+  { id: 'jee', title: 'JEE', color: theme.colors.accent.cyan },
+  { id: 'general', title: 'General', color: theme.colors.text.muted }
 ];
 
 const quickTopics = [
-  { topic: 'Delhi Sultanate', type: 'historical_period', exam: 'upsc' },
+  { topic: 'Indian Independence Movement', type: 'historical_period', exam: 'upsc' },
   { topic: 'Fundamental Rights', type: 'constitution', exam: 'upsc' },
-  { topic: 'Indian Rivers', type: 'geography', exam: 'ssc' },
   { topic: 'Photosynthesis', type: 'science', exam: 'neet' },
-  { topic: 'Mughal Empire', type: 'historical_period', exam: 'upsc' },
-  { topic: 'Emergency Provisions', type: 'constitution', exam: 'banking' },
-  { topic: 'Climate of India', type: 'geography', exam: 'state_pcs' },
-  { topic: 'Atomic Structure', type: 'science', exam: 'jee' }
+  { topic: 'Trigonometry', type: 'science', exam: 'jee' },
+  { topic: 'Banking Awareness', type: 'general', exam: 'banking' },
+  { topic: 'Current Affairs 2024', type: 'general', exam: 'ssc' }
 ];
 
 export default function ContentGenerationModal(props: ContentGenerationModalProps) {
-  const { visible, onClose, onGenerate, contentType, isLoading } = props;
+  const { visible, onClose, onGenerate, isLoading } = props;
   const [topic, setTopic] = useState('');
   const [selectedContentType, setSelectedContentType] = useState<string>('general');
   const [selectedExamType, setSelectedExamType] = useState<string>('general');
   const [subject, setSubject] = useState('');
   const [showQuickTopics, setShowQuickTopics] = useState(true);
 
-  const modalScale = useSharedValue(0.9);
-  const modalOpacity = useSharedValue(0);
-
-  React.useEffect(() => {
-    if (visible) {
-      modalOpacity.value = withTiming(1, { duration: 300 });
-      modalScale.value = withSpring(1, { damping: 15, stiffness: 100 });
-    } else {
-      modalOpacity.value = withTiming(0, { duration: 200 });
-      modalScale.value = withTiming(0.9, { duration: 200 });
-    }
-  }, [visible]);
-
-  const modalAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: modalOpacity.value,
-    transform: [{ scale: modalScale.value }],
-  }));
-
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     console.log('🚀 CONTENT GENERATION - handleGenerate called');
-    console.log('📝 Topic:', topic);
-    console.log('🎯 Content Type:', selectedContentType);
-    console.log('📚 Subject:', subject);
-    console.log('🎓 Exam Focus:', selectedExamType);
     
     if (!topic.trim()) {
-      console.log('❌ No topic entered');
       Alert.alert('Missing Topic', 'Please enter a topic to generate content for.');
       return;
     }
 
-    // Create mission data compatible with SupabaseService.createMission
     const missionData = {
       title: topic.trim(),
       description: `Learn ${topic.trim()} with AI-generated content`,
-      content_type: contentType || 'text',
+      content_type: 'text',
       content_text: topic.trim(),
       subject_name: subject.trim() || selectedContentType,
       difficulty: 'medium',
@@ -151,21 +122,21 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
     };
 
     console.log('📦 Mission data created:', missionData);
-    console.log('🔗 Calling onGenerate with data...');
     
     try {
-      onGenerate(missionData);
-      console.log('✅ onGenerate called successfully');
-      onClose();
+      // Call the onGenerate callback which should handle the actual content generation
+      await onGenerate(missionData);
       
-      // Reset form
+      // Reset form only if successful - the parent will close modal
       setTopic('');
       setSelectedContentType('general');
       setSelectedExamType('general');
       setSubject('');
       setShowQuickTopics(true);
+      
     } catch (error) {
-      console.error('❌ Error in handleGenerate:', error);
+      console.error('Error generating content:', error);
+      Alert.alert('Error', 'Failed to generate content. Please try again.');
     }
   };
 
@@ -185,21 +156,11 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity 
-          style={styles.overlayTouchable}
-          activeOpacity={1} 
-          onPress={onClose}
-        />
-        <Animated.View 
-          style={[styles.modal, modalAnimatedStyle]}
-        >
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={styles.modalContainer} onPress={() => {}}>
           <LinearGradient
-            colors={[
-              theme.colors.background.card,
-              theme.colors.background.secondary,
-            ]}
-            style={styles.modalGradient}
+            colors={[theme.colors.background.card, theme.colors.background.secondary]}
+            style={styles.modal}
           >
             {/* Header */}
             <View style={styles.header}>
@@ -212,7 +173,11 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              style={styles.content} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContainer}
+            >
               {/* Quick Topics */}
               {showQuickTopics && (
                 <View style={styles.section}>
@@ -304,28 +269,28 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
                     </View>
                   </View>
 
-                  {/* Exam Focus Selection */}
+                  {/* Exam Type Selection */}
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>🎓 Exam Focus</Text>
-                    <Text style={styles.sectionSubtitle}>Tailor content for specific competitive exams</Text>
+                    <Text style={styles.sectionSubtitle}>Optimize content for specific exam patterns</Text>
                     
-                    <View style={styles.examGrid}>
+                    <View style={styles.examTypesContainer}>
                       {examTypes.map((exam) => (
                         <TouchableOpacity
                           key={exam.id}
                           style={[
-                            styles.examCard,
-                            selectedExamType === exam.id && styles.selectedExam
+                            styles.examTypeChip,
+                            selectedExamType === exam.id && styles.selectedExamType,
+                            { borderColor: selectedExamType === exam.id ? exam.color : theme.colors.border.tertiary }
                           ]}
                           onPress={() => setSelectedExamType(exam.id)}
                         >
                           <Text style={[
-                            styles.examTitle,
-                            selectedExamType === exam.id && styles.selectedExamText
+                            styles.examTypeText,
+                            { color: selectedExamType === exam.id ? exam.color : theme.colors.text.secondary }
                           ]}>
                             {exam.title}
                           </Text>
-                          <Text style={styles.examDescription}>{exam.description}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -336,18 +301,22 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
                     <Text style={styles.sectionTitle}>📚 Subject (Optional)</Text>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="e.g., History, Polity, Physics"
+                      placeholder="e.g., History, Physics, Geography"
                       placeholderTextColor={theme.colors.text.tertiary}
                       value={subject}
                       onChangeText={setSubject}
                     />
                   </View>
 
+                  {/* Back to Quick Topics */}
                   <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => setShowQuickTopics(true)}
+                    onPress={() => {
+                      setShowQuickTopics(true);
+                      setTopic('');
+                    }}
                   >
-                    <Text style={styles.backButtonText}>← Back to Quick Topics</Text>
+                    <Text style={styles.backButtonText}>← Back to quick topics</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -357,49 +326,74 @@ export default function ContentGenerationModal(props: ContentGenerationModalProp
             {!showQuickTopics && (
               <View style={styles.footer}>
                 <GradientButton
-                  title="Generate Smart Content"
+                  title={isLoading ? "Creating..." : "Generate Smart Content"}
                   onPress={handleGenerate}
                   size="large"
                   fullWidth
-                  icon={<Sparkles size={20} color={theme.colors.text.primary} />}
+                  icon={isLoading ? 
+                    <ActivityIndicator size={20} color={theme.colors.text.primary} /> :
+                    <Sparkles size={20} color={theme.colors.text.primary} />
+                  }
                   colors={[theme.colors.accent.purple, theme.colors.accent.blue]}
+                  disabled={isLoading}
                 />
               </View>
             )}
           </LinearGradient>
-        </Animated.View>
-      </View>
+          
+          {/* Loading Overlay - Duolingo Style */}
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <LinearGradient
+                colors={[theme.colors.accent.purple + 'E6', theme.colors.accent.blue + 'E6']}
+                style={styles.loadingContainer}
+              >
+                <View style={styles.loadingContent}>
+                  <ActivityIndicator size={60} color={theme.colors.text.primary} />
+                  <Text style={styles.loadingTitle}>Creating Your Learning Journey</Text>
+                  <Text style={styles.loadingSubtitle}>
+                    🧠 Analyzing your topic{'\n'}
+                    📚 Structuring content{'\n'}
+                    ✨ Generating smart materials
+                  </Text>
+                  <View style={styles.progressDots}>
+                    <View style={[styles.dot, styles.dotActive]} />
+                    <View style={[styles.dot, styles.dotActive]} />
+                    <View style={[styles.dot, styles.dotActive]} />
+                    <View style={styles.dot} />
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
-  overlayTouchable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  modalContainer: {
+    width: '100%',
+    maxWidth: 600,
+    height: '80%',
+    maxHeight: 700,
   },
   modal: {
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '85%',
-    borderRadius: theme.borderRadius.xl,
-    overflow: 'hidden',
-  },
-  modalGradient: {
     flex: 1,
     borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
+    backgroundColor: theme.colors.background.card,
   },
   header: {
     flexDirection: 'row',
@@ -424,7 +418,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContainer: {
     padding: theme.spacing.lg,
+    flexGrow: 1,
   },
   section: {
     marginBottom: theme.spacing.xl,
@@ -444,14 +441,84 @@ const styles = StyleSheet.create({
   textInput: {
     backgroundColor: theme.colors.background.tertiary,
     borderRadius: theme.borderRadius.md,
-    borderWidth: 2,
-    borderColor: theme.colors.border.tertiary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
+    padding: theme.spacing.md,
     fontSize: 16,
     fontFamily: theme.fonts.body,
     color: theme.colors.text.primary,
-    minHeight: 48,
+    borderWidth: 1,
+    borderColor: theme.colors.border.secondary,
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  optionCard: {
+    width: '48%',
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  selectedOption: {
+    transform: [{ scale: 0.98 }],
+  },
+  optionGradient: {
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.tertiary,
+    borderRadius: theme.borderRadius.lg,
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.subheading,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  optionDescription: {
+    fontSize: 12,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
+  },
+  exampleTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+  },
+  exampleTag: {
+    fontSize: 10,
+    fontFamily: theme.fonts.caption,
+    color: theme.colors.text.tertiary,
+    backgroundColor: theme.colors.background.primary,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.xs,
+  },
+  examTypesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  examTypeChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    backgroundColor: theme.colors.background.tertiary,
+  },
+  selectedExamType: {
+    backgroundColor: theme.colors.background.primary,
+  },
+  examTypeText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.subheading,
   },
   quickTopicsGrid: {
     flexDirection: 'row',
@@ -484,8 +551,8 @@ const styles = StyleSheet.create({
     color: theme.colors.accent.purple,
     backgroundColor: theme.colors.accent.purple + '20',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.xs,
   },
   customTopicButton: {
     alignItems: 'center',
@@ -494,98 +561,7 @@ const styles = StyleSheet.create({
   customTopicText: {
     fontSize: 14,
     fontFamily: theme.fonts.subheading,
-    color: theme.colors.accent.purple,
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  optionCard: {
-    width: '48%',
-    borderRadius: theme.borderRadius.md,
-    overflow: 'hidden',
-  },
-  selectedOption: {
-    ...theme.shadows.card,
-  },
-  optionGradient: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border.tertiary,
-    borderRadius: theme.borderRadius.md,
-    minHeight: 140,
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  optionTitle: {
-    fontSize: 14,
-    fontFamily: theme.fonts.subheading,
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  optionDescription: {
-    fontSize: 12,
-    fontFamily: theme.fonts.caption,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  exampleTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-    justifyContent: 'center',
-  },
-  exampleTag: {
-    fontSize: 10,
-    fontFamily: theme.fonts.caption,
-    color: theme.colors.text.tertiary,
-    backgroundColor: theme.colors.background.tertiary,
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-  },
-  examGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  examCard: {
-    width: '31%',
-    backgroundColor: theme.colors.background.tertiary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.sm,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.border.tertiary,
-  },
-  selectedExam: {
-    borderColor: theme.colors.accent.purple,
-    backgroundColor: theme.colors.accent.purple + '20',
-  },
-  examTitle: {
-    fontSize: 14,
-    fontFamily: theme.fonts.subheading,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  selectedExamText: {
-    color: theme.colors.accent.purple,
-  },
-  examDescription: {
-    fontSize: 10,
-    fontFamily: theme.fonts.caption,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
+    color: theme.colors.accent.blue,
   },
   backButton: {
     alignItems: 'center',
@@ -600,5 +576,56 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border.tertiary,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    width: '90%',
+    paddingVertical: theme.spacing.xxl,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  loadingTitle: {
+    fontSize: 22,
+    fontFamily: theme.fonts.heading,
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+  },
+  loadingSubtitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  progressDots: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.background.tertiary,
+  },
+  dotActive: {
+    backgroundColor: theme.colors.accent.green,
   },
 });
