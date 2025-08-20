@@ -24,6 +24,7 @@ import Animated, {
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
+import { router } from 'expo-router';
 
 const { width = 375 } = Dimensions.get('window') || {};
 
@@ -504,6 +505,22 @@ function PodiumUser({ user, height, isWinner, podiumColor, league, index }: {
     }
   };
 
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'online': return theme.colors.status.online;
+      case 'studying': return theme.colors.status.studying;
+      default: return theme.colors.status.offline;
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'online': return 'circle';
+      case 'studying': return 'book-open';
+      default: return 'circle';
+    }
+  };
+
   return (
     <Animated.View style={[styles.podiumPerson, { height }, animatedStyle]}>
       {/* Podium Base */}
@@ -598,6 +615,22 @@ function LeaderboardListItem({ user, league, index }: {
       withTiming(0.98, { duration: 100 }),
       withSpring(1, { damping: 15, stiffness: 120 })
     );
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'online': return theme.colors.status.online;
+      case 'studying': return theme.colors.status.studying;
+      default: return theme.colors.status.offline;
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'online': return 'circle';
+      case 'studying': return 'book-open';
+      default: return 'circle';
+    }
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -1048,7 +1081,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
   },
   usersList: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
   },
   listItem: {
     borderRadius: theme.borderRadius.lg,
@@ -1063,10 +1096,11 @@ const styles = StyleSheet.create({
   listItemGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border.tertiary,
     borderRadius: theme.borderRadius.lg,
+    minHeight: 80,
   },
   rankContainer: {
     width: 40,
@@ -1084,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.lg,
   },
   listAvatar: {
     width: 48,
@@ -1117,14 +1151,16 @@ const styles = StyleSheet.create({
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing.sm,
+    minHeight: 24,
   },
   listUserName: {
     fontSize: 16,
     fontFamily: theme.fonts.subheading,
     flex: 1,
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.lg,
+    lineHeight: 22,
   },
   xpContainer: {
     flexDirection: 'row',
@@ -1139,7 +1175,9 @@ const styles = StyleSheet.create({
   userStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
+    flexWrap: 'wrap',
+    marginTop: theme.spacing.xs,
   },
   statItem: {
     flexDirection: 'row',

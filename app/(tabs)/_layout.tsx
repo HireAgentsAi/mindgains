@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { theme } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -51,7 +51,7 @@ export default function TabLayout() {
           title: 'Learn',
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
-              name="graduation-cap"
+              name="brain"
               size={focused ? 26 : 22}
               color={color}
               solid={focused}
@@ -66,7 +66,21 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
               name="fist-raised"
-              size={focused ? 28 : 24}
+              size={focused ? 26 : 22}
+              color={color}
+              solid={focused}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="india-challenge"
+        options={{
+          title: 'India Challenge',
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesome5
+              name="flag-usa"
+              size={focused ? 26 : 22}
               color={color}
               solid={focused}
             />
@@ -79,7 +93,7 @@ export default function TabLayout() {
           title: 'Leaderboard',
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
-              name="trophy"
+              name="medal"
               size={focused ? 26 : 22}
               color={color}
               solid={focused}
@@ -93,7 +107,7 @@ export default function TabLayout() {
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
             <FontAwesome5
-              name="user-circle"
+              name="user-ninja"
               size={focused ? 26 : 22}
               color={color}
               solid={focused}

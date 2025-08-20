@@ -23,7 +23,9 @@ import GradientButton from './GradientButton';
 interface ContentGenerationModalProps {
   visible: boolean;
   onClose: () => void;
-  onGenerate: (config: GenerationConfig) => void;
+  onGenerate: (config: any) => void;
+  contentType?: string | null;
+  isLoading?: boolean;
 }
 
 interface GenerationConfig {
@@ -97,11 +99,8 @@ const quickTopics = [
   { topic: 'Atomic Structure', type: 'science', exam: 'jee' }
 ];
 
-export default function ContentGenerationModal({
-  visible,
-  onClose,
-  onGenerate
-}: ContentGenerationModalProps) {
+export default function ContentGenerationModal(props: ContentGenerationModalProps) {
+  const { visible, onClose, onGenerate, contentType, isLoading } = props;
   const [topic, setTopic] = useState('');
   const [selectedContentType, setSelectedContentType] = useState<string>('general');
   const [selectedExamType, setSelectedExamType] = useState<string>('general');
@@ -127,27 +126,47 @@ export default function ContentGenerationModal({
   }));
 
   const handleGenerate = () => {
+    console.log('🚀 CONTENT GENERATION - handleGenerate called');
+    console.log('📝 Topic:', topic);
+    console.log('🎯 Content Type:', selectedContentType);
+    console.log('📚 Subject:', subject);
+    console.log('🎓 Exam Focus:', selectedExamType);
+    
     if (!topic.trim()) {
+      console.log('❌ No topic entered');
       Alert.alert('Missing Topic', 'Please enter a topic to generate content for.');
       return;
     }
 
-    const config: GenerationConfig = {
-      topic: topic.trim(),
-      contentType: selectedContentType as any,
-      examFocus: selectedExamType as any,
-      subject: subject.trim() || undefined
+    // Create mission data compatible with SupabaseService.createMission
+    const missionData = {
+      title: topic.trim(),
+      description: `Learn ${topic.trim()} with AI-generated content`,
+      content_type: contentType || 'text',
+      content_text: topic.trim(),
+      subject_name: subject.trim() || selectedContentType,
+      difficulty: 'medium',
+      contentType: selectedContentType,
+      examFocus: selectedExamType,
     };
 
-    onGenerate(config);
-    onClose();
+    console.log('📦 Mission data created:', missionData);
+    console.log('🔗 Calling onGenerate with data...');
     
-    // Reset form
-    setTopic('');
-    setSelectedContentType('general');
-    setSelectedExamType('general');
-    setSubject('');
-    setShowQuickTopics(true);
+    try {
+      onGenerate(missionData);
+      console.log('✅ onGenerate called successfully');
+      onClose();
+      
+      // Reset form
+      setTopic('');
+      setSelectedContentType('general');
+      setSelectedExamType('general');
+      setSubject('');
+      setShowQuickTopics(true);
+    } catch (error) {
+      console.error('❌ Error in handleGenerate:', error);
+    }
   };
 
   const handleQuickTopic = (quickTopic: any) => {
@@ -167,7 +186,14 @@ export default function ContentGenerationModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <Animated.View style={[styles.modal, modalAnimatedStyle]}>
+        <TouchableOpacity 
+          style={styles.overlayTouchable}
+          activeOpacity={1} 
+          onPress={onClose}
+        />
+        <Animated.View 
+          style={[styles.modal, modalAnimatedStyle]}
+        >
           <LinearGradient
             colors={[
               theme.colors.background.card,
@@ -355,10 +381,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.lg,
   },
+  overlayTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   modal: {
-    width: '100%',
+    width: '90%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '85%',
     borderRadius: theme.borderRadius.xl,
     overflow: 'hidden',
   },

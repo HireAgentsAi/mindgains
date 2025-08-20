@@ -275,7 +275,7 @@ export default function DailyQuizScreen() {
         // Show success message
         Alert.alert(
           '🎉 Quiz Complete!',
-          `You scored ${submitResult.results.score_percentage}%!\n\n${submitResult.results.grok_message || 'Great job!'}`,
+          `You scored ${submitResult.results.score_percentage}%!\n\n${submitResult.results.mascot_message || 'Great job!'}`,
           [{ text: 'View Results', onPress: () => {} }]
         );
       } else {
@@ -302,7 +302,7 @@ export default function DailyQuizScreen() {
         total_points: correctCount * 10,
         time_spent: timeSpent,
         xp_earned: correctCount * 5,
-        grok_message: getGrokMessage(percentage, correctCount, quiz.questions.length)
+        mascot_message: getMascotMessage(percentage, correctCount, quiz.questions.length)
       };
       
       setResults(fallbackResults);
@@ -310,7 +310,7 @@ export default function DailyQuizScreen() {
       
       Alert.alert(
         '🎉 Quiz Complete!',
-        `You scored ${percentage}%!\n\n${fallbackResults.grok_message}`,
+        `You scored ${percentage}%!\n\n${fallbackResults.mascot_message}`,
         [{ text: 'View Results', onPress: () => {} }]
       );
     } finally {
@@ -320,7 +320,7 @@ export default function DailyQuizScreen() {
     }
   };
 
-  const getGrokMessage = (percentage: number, correct: number, total: number): string => {
+  const getMascotMessage = (percentage: number, correct: number, total: number): string => {
     if (percentage === 100) {
       return "🎯 Perfect score! You're basically a walking encyclopedia of Indian knowledge! Time to challenge Einstein! 🧠✨";
     } else if (percentage >= 90) {
@@ -457,18 +457,18 @@ export default function DailyQuizScreen() {
                 {results.correct_answers} out of {results.total_questions} correct
               </Text>
               
-              {/* Grok's Witty Message */}
-              {results.grok_message && (
-                <View style={styles.grokMessageContainer}>
+              {/* Mascot's Witty Message */}
+              {results.mascot_message && (
+                <View style={styles.mascotMessageContainer}>
                   <LinearGradient
                     colors={[theme.colors.accent.purple + '20', theme.colors.accent.blue + '20']}
-                    style={styles.grokMessageCard}
+                    style={styles.mascotMessageCard}
                   >
-                    <View style={styles.grokMessageHeader}>
-                      <Text style={styles.grokMessageIcon}>🤖</Text>
-                      <Text style={styles.grokMessageTitle}>Grok's Take</Text>
+                    <View style={styles.mascotMessageHeader}>
+                      <Text style={styles.mascotMessageIcon}>💬</Text>
+                      <Text style={styles.mascotMessageTitle}>MindGains Buddy</Text>
                     </View>
-                    <Text style={styles.grokMessageText}>{results.grok_message}</Text>
+                    <Text style={styles.mascotMessageText}>{results.mascot_message}</Text>
                   </LinearGradient>
                 </View>
               )}
@@ -1105,31 +1105,31 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textAlign: 'center',
   },
-  grokMessageContainer: {
+  mascotMessageContainer: {
     width: '100%',
     marginTop: theme.spacing.lg,
   },
-  grokMessageCard: {
+  mascotMessageCard: {
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
   },
-  grokMessageHeader: {
+  mascotMessageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
   },
-  grokMessageIcon: {
+  mascotMessageIcon: {
     fontSize: 20,
   },
-  grokMessageTitle: {
+  mascotMessageTitle: {
     fontSize: 16,
     fontFamily: theme.fonts.subheading,
     color: theme.colors.accent.purple,
   },
-  grokMessageText: {
+  mascotMessageText: {
     fontSize: 14,
     fontFamily: theme.fonts.body,
     color: theme.colors.text.primary,

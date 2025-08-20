@@ -178,8 +178,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Generate Grok's witty response
-    const grokMessage = await generateGrokResponse(scorePercentage, correctAnswers, questions.length);
-    console.log('🤖 Grok message generated:', grokMessage);
+    const mascotMessage = await generateMascotResponse(scorePercentage, correctAnswers, questions.length);
+    console.log('🤖 Mascot message generated:', mascotMessage);
 
     // Generate mascot recommendations
     const recommendations = await generateMascotRecommendations(supabase, user.id, detailedResults, scorePercentage);
@@ -198,7 +198,7 @@ Deno.serve(async (req: Request) => {
         accuracy: accuracyBonus,
         speed: speedBonus
       },
-      grok_message: grokMessage,
+      mascot_message: mascotMessage,
       recommendations,
       attempt_id: attempt?.id
     };
@@ -297,23 +297,23 @@ function calculateRank(level: number, totalXP: number, recentScore: number): str
   return 'Beginner Scholar';
 }
 
-async function generateGrokResponse(scorePercentage: number, correctAnswers: number, totalQuestions: number): Promise<string> {
+async function generateMascotResponse(scorePercentage: number, correctAnswers: number, totalQuestions: number): Promise<string> {
   try {
     const grokApiKey = Deno.env.get('GROK_API_KEY');
     
     if (!grokApiKey) {
-      console.log('⚠️ Grok API key not available, using fallback');
-      return getFallbackGrokMessage(scorePercentage);
+      console.log('⚠️ AI API key not available, using fallback');
+      return getFallbackMascotMessage(scorePercentage);
     }
 
-    const prompt = `You are Grok, the witty AI assistant. A student just completed an Indian competitive exam daily quiz with ${correctAnswers}/${totalQuestions} correct answers (${scorePercentage}%).
+    const prompt = `You are the MindGains mascot, a witty and encouraging study buddy. A student just completed an Indian competitive exam daily quiz with ${correctAnswers}/${totalQuestions} correct answers (${scorePercentage}%).
 
 Generate a witty, encouraging, and culturally relevant response that:
 1. References Indian culture, history, or current events humorously
 2. Is encouraging but realistic about their performance
 3. Includes relevant emojis
 4. Keeps it under 150 characters
-5. Has your signature wit and humor
+5. Has a friendly, mascot-like personality
 
 Make it specific to their ${scorePercentage}% score and Indian context.`;
 
@@ -347,15 +347,15 @@ Make it specific to their ${scorePercentage}% score and Indian context.`;
       return message;
     } else {
       console.log('⚠️ Grok API failed, using fallback');
-      return getFallbackGrokMessage(scorePercentage);
+      return getFallbackMascotMessage(scorePercentage);
     }
   } catch (error) {
     console.error('Error generating Grok response:', error);
-    return getFallbackGrokMessage(scorePercentage);
+    return getFallbackMascotMessage(scorePercentage);
   }
 }
 
-function getFallbackGrokMessage(percentage: number): string {
+function getFallbackMascotMessage(percentage: number): string {
   if (percentage === 100) {
     return "🎯 Perfect score! You're basically a walking encyclopedia of Indian knowledge! Time to challenge Einstein! 🧠✨";
   } else if (percentage >= 90) {

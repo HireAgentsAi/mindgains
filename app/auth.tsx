@@ -453,6 +453,19 @@ export default function AuthScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Demo Login */}
+                {isLogin && (
+                  <TouchableOpacity 
+                    style={styles.demoButton}
+                    onPress={() => {
+                      setEmail('demo@mindgains.ai');
+                      setPassword('demo123');
+                    }}
+                  >
+                    <Text style={styles.demoButtonText}>Use Demo Account</Text>
+                  </TouchableOpacity>
+                )}
               </Animated.View>
             </LinearGradient>
           </Animated.View>

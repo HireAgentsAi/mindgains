@@ -101,6 +101,15 @@ export interface UserMemory {
   updated_at: string;
 }
 
+export interface LearningStats {
+  total_xp: number;
+  current_level: number;
+  missions_completed: number;
+  streak_days: number;
+  total_study_time: number;
+  rank: string;
+}
+
 export interface DailyQuiz {
   id: string;
   date: string;
@@ -918,11 +927,78 @@ Return JSON:
           subtopic: "Space Missions",
           difficulty: "medium",
           points: 15
+        },
+        {
+          id: 'demo11',
+          question: "Which Indian state has the longest coastline?",
+          options: ["Tamil Nadu", "Gujarat", "Maharashtra", "Andhra Pradesh"],
+          correct_answer: 1,
+          explanation: "Gujarat has the longest coastline in India, stretching over 1,600 kilometers.",
+          subject: "Geography",
+          subtopic: "Physical Geography",
+          difficulty: "medium",
+          points: 15
+        },
+        {
+          id: 'demo12',
+          question: "The Indian National Congress was founded in which year?",
+          options: ["1884", "1885", "1886", "1887"],
+          correct_answer: 1,
+          explanation: "The Indian National Congress was founded in 1885 by A.O. Hume.",
+          subject: "History",
+          subtopic: "Political Organizations",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          id: 'demo13',
+          question: "Which is India's highest civilian award?",
+          options: ["Padma Vibhushan", "Bharat Ratna", "Padma Bhushan", "Padma Shri"],
+          correct_answer: 1,
+          explanation: "Bharat Ratna is India's highest civilian honor, instituted in 1954.",
+          subject: "General Knowledge",
+          subtopic: "Awards",
+          difficulty: "easy",
+          points: 10
+        },
+        {
+          id: 'demo14',
+          question: "The Battle of Plassey was fought in which year?",
+          options: ["1756", "1757", "1758", "1759"],
+          correct_answer: 1,
+          explanation: "The Battle of Plassey was fought on June 23, 1757, establishing British dominance in India.",
+          subject: "History",
+          subtopic: "British Period",
+          difficulty: "medium",
+          points: 15
+        },
+        {
+          id: 'demo15',
+          question: "Which commission recommended the establishment of Public Service Commissions?",
+          options: ["Montagu-Chelmsford Commission", "Lee Commission", "Macaulay Committee", "Aitchison Commission"],
+          correct_answer: 1,
+          explanation: "The Lee Commission (1924) recommended the establishment of Public Service Commissions in India.",
+          subject: "Polity",
+          subtopic: "Administrative Reforms",
+          difficulty: "hard",
+          points: 20
         }
       ];
 
-      // Select all 10 questions for demo
-      const selectedQuestions = questionBank;
+      // Create a daily seed based on the date to ensure consistent daily quizzes
+      // but different questions each day
+      const dateNumber = new Date(today).getTime() / (24 * 60 * 60 * 1000); // Days since epoch
+      const dailySeed = Math.floor(dateNumber) % 1000; // Create a daily seed
+      
+      // Shuffle questions based on daily seed for consistent daily randomization
+      const shuffledQuestions = [...questionBank].sort((a, b) => {
+        const aIndex = questionBank.findIndex(q => q.id === a.id);
+        const bIndex = questionBank.findIndex(q => q.id === b.id);
+        return ((aIndex + dailySeed) % questionBank.length) - ((bIndex + dailySeed) % questionBank.length);
+      });
+      
+      // Select 10 questions with balanced difficulty
+      const selectedQuestions = shuffledQuestions.slice(0, 10);
 
       // Create quiz object
       const quiz = {
@@ -1891,4 +1967,200 @@ Return JSON:
       throw error
     }
   }
+
+  // Edge Function Helper
+  static async callEdgeFunction(functionName: string, payload: any) {
+    try {
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: payload
+      });
+
+      if (error) {
+        console.error(`Edge function ${functionName} error:`, error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`Failed to call ${functionName}:`, error);
+      throw error;
+    }
+  }
+
+  // OCR Processing
+  static async processImageOCR(imageData: string, imageType: string) {
+    return this.callEdgeFunction('process-image-ocr', {
+      imageData,
+      imageType
+    });
+  }
+
+  // PDF Processing  
+  static async processPDF(fileData: string, fileName: string, maxPages?: number) {
+    return this.callEdgeFunction('process-pdf', {
+      fileData,
+      fileName,
+      maxPages
+    });
+  }
+
+  // YouTube Processing
+  static async processYouTube(url: string, language?: string) {
+    return this.callEdgeFunction('process-youtube', {
+      url,
+      language
+    });
+  }
+
+  // Battle System & India Challenge
+  static async makeBattleRequest(action: string, params: any = {}) {
+    try {
+      const { data, error } = await supabase.functions.invoke('india-challenge', {
+        body: {
+          action,
+          ...params
+        }
+      });
+
+      if (error) {
+        console.error(`Battle request ${action} failed:`, error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`Error in ${action} request:`, error);
+      throw error;
+    }
+  }
+
+  // Coin Management
+  static async deductUserCoins(userId: string, amount: number) {
+    try {
+      // First get current balance
+      const { data: currentData, error: fetchError } = await supabase
+        .from('user_coins')
+        .select('balance, total_spent')
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) {
+        // If user doesn't have coins record, create one
+        if (fetchError.code === 'PGRST116') {
+          const { data: newData, error: insertError } = await supabase
+            .from('user_coins')
+            .insert({
+              user_id: userId,
+              balance: Math.max(1000 - amount, 0), // Start with 1000 coins, deduct amount
+              total_earned: 1000,
+              total_spent: amount
+            })
+            .select()
+            .single();
+          
+          if (insertError) throw insertError;
+          return newData;
+        }
+        throw fetchError;
+      }
+
+      const newBalance = Math.max((currentData.balance || 0) - amount, 0);
+      const newTotalSpent = (currentData.total_spent || 0) + amount;
+
+      // Update with calculated values
+      const { data, error } = await supabase
+        .from('user_coins')
+        .update({ 
+          balance: newBalance,
+          total_spent: newTotalSpent,
+          last_updated: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error deducting coins:', error);
+      throw error;
+    }
+  }
+
+  static async getUserProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  }
+
+  /* DUPLICATE METHOD - COMMENTED OUT
+  static async createMission(missionData: any) {
+    console.log('📝 SUPABASE - createMission called');
+    console.log('📋 Input data:', missionData);
+    
+    try {
+      console.log('👤 Getting current user...');
+      const user = await this.getCurrentUser();
+      console.log('User result:', user);
+      
+      if (!user) {
+        console.error('❌ User not authenticated');
+        throw new Error('User not authenticated');
+      }
+
+      console.log('✅ User authenticated:', user.id);
+
+      const insertData = {
+        user_id: user.id,
+        title: missionData.title,
+        description: missionData.description,
+        content_type: missionData.content_type || 'text',
+        content_text: missionData.content_text,
+        subject_id: missionData.subject_id,
+        difficulty: missionData.difficulty || 'medium',
+        estimated_time: 30,
+        xp_reward: 100,
+        status: 'active',
+        is_public: false,
+        tags: [missionData.contentType, missionData.examFocus].filter(Boolean)
+      };
+
+      console.log('💾 Inserting mission data:', insertData);
+
+      const { data, error } = await supabase
+        .from('missions')
+        .insert(insertData)
+        .select()
+        .single();
+
+      console.log('Database result - data:', data);
+      console.log('Database result - error:', error);
+
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Mission created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Error creating mission:', error);
+      throw error;
+    }
+  } */
 }
+
+// Export a service instance for easy access
+export const supabaseService = new (class extends SupabaseService {
+  // Instance methods can be added here if needed
+})();

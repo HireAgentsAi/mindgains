@@ -33,6 +33,28 @@ import { demoUserProfile, demoUserStats, demoUserAchievements, demoAchievements 
 
 const { width = 375 } = Dimensions.get('window') || {};
 
+// Map achievement category/name to appropriate FontAwesome icons
+const getAchievementIcon = (achievement: Achievement) => {
+  // Map based on category first, then name
+  const categoryIcons: { [key: string]: string } = {
+    'learning': 'book',
+    'speed': 'bolt',
+    'mastery': 'trophy',
+    'streak': 'fire',
+  };
+  
+  // Specific achievement icons based on name
+  const nameIcons: { [key: string]: string } = {
+    'First Steps': 'shoe-prints',
+    'Speed Demon': 'bolt',
+    'Perfect Score': 'trophy',
+    'Knowledge Seeker': 'book-open',
+    'Streak Master': 'fire',
+  };
+  
+  return nameIcons[achievement.name] || categoryIcons[achievement.category] || 'star';
+};
+
 interface Achievement {
   id: string;
   name: string;
@@ -640,7 +662,12 @@ function AchievementCard({ achievement, index }: {
           styles.achievementIcon,
           { backgroundColor: achievement.unlocked ? achievement.badge_color + '40' : theme.colors.background.tertiary }
         ]}>
-          <Text style={styles.achievementIconText}>{achievement.icon}</Text>
+          <FontAwesome5 
+            name={getAchievementIcon(achievement)} 
+            size={20} 
+            color={achievement.unlocked ? achievement.badge_color : theme.colors.text.tertiary} 
+            solid 
+          />
           {achievement.unlocked && (
             <View style={styles.achievementCheck}>
               <FontAwesome5 name="check" size={8} color={theme.colors.text.primary} solid />

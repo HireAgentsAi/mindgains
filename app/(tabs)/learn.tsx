@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -33,6 +34,10 @@ import {
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { theme } from '@/constants/theme';
 import { SupabaseService } from '@/utils/supabaseService';
+import CameraScanModal from '@/components/ui/CameraScanModal';
+import PDFUploadModal from '@/components/ui/PDFUploadModal';
+import YouTubeInputModal from '@/components/ui/YouTubeInputModal';
+import ContentGenerationModal from '@/components/ui/ContentGenerationModal';
 
 const { width } = Dimensions.get('window');
 
@@ -51,6 +56,7 @@ interface QuickAction {
   id: string;
   title: string;
   subtitle: string;
+  examples?: string[];
   icon: any;
   color: string;
   onPress: () => void;
@@ -66,6 +72,11 @@ export default function Learn() {
     streakDays: 15,
     completedLessons: 87,
   });
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showPDFModal, setShowPDFModal] = useState(false);
+  const [showYouTubeModal, setShowYouTubeModal] = useState(false);
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fadeIn = useSharedValue(0);
 
@@ -129,6 +140,51 @@ export default function Learn() {
     });
   };
 
+  const handleCreateFromText = async (config: any) => {
+    console.log('🎯 LEARN - handleCreateFromText called');
+    console.log('📋 Received config:', config);
+    
+    try {
+      setIsProcessing(true);
+      console.log('⏳ Processing started...');
+      
+      const missionData = {
+        title: config.title || config.topic || 'Text-based Learning',
+        description: config.description || (config.title ? `Learn about ${config.title}` : 'Custom text learning mission'),
+        content_type: config.content_type || 'text',
+        content_text: config.content_text || config.topic,
+        subject_name: config.subject_name || config.subject || 'General',
+        difficulty: config.difficulty || 'medium',
+        contentType: config.contentType || 'general',
+        examFocus: config.examFocus || 'general',
+      };
+      
+      console.log('📦 Creating mission with data:', missionData);
+      
+      // Create mission from text content
+      const result = await SupabaseService.createMission(missionData);
+      console.log('✅ Mission created successfully:', result);
+      
+      setShowTextModal(false);
+      console.log('🔄 Refreshing subjects list...');
+      
+      // Navigate to the mission or refresh the subjects list
+      await loadSubjects();
+      console.log('✅ Subjects refreshed');
+      
+      Alert.alert('Success', 'Learning mission created successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error creating text mission:', error);
+      Alert.alert('Error', `Failed to create mission: ${(error as any)?.message || 'Unknown error'}`);
+    } finally {
+      if (isMounted.current) {
+        setIsProcessing(false);
+        console.log('⏹️ Processing finished');
+      }
+    }
+  };
+
   const quickActions: QuickAction[] = [
     {
       id: 'daily',
@@ -139,28 +195,40 @@ export default function Learn() {
       onPress: () => router.push('/quiz/daily'),
     },
     {
-      id: 'practice',
-      title: 'Practice Mode',
-      subtitle: 'Unlimited practice questions',
-      icon: 'bullseye',
+      id: 'smart-text',
+      title: 'Smart Text',
+      subtitle: 'Transform any text into structured lessons',
+      examples: ['Study notes', 'Research papers', 'Articles'],
+      icon: 'edit',
       color: theme.colors.accent.green,
-      onPress: () => router.push('/quiz/practice'),
+      onPress: () => setShowTextModal(true),
     },
     {
-      id: 'mock',
-      title: 'Mock Test',
-      subtitle: 'Full-length exam simulation',
-      icon: 'clock',
-      color: theme.colors.accent.yellow,
-      onPress: () => router.push('/quiz/mock'),
+      id: 'youtube',
+      title: 'YouTube Videos',
+      subtitle: 'Convert videos into interactive learning',
+      examples: ['Khan Academy', 'Crash Course', 'Educational videos'],
+      icon: 'play',
+      color: '#FF6B35', // Custom orange color for better visibility
+      onPress: () => setShowYouTubeModal(true),
     },
     {
-      id: 'compete',
-      title: 'Compete',
-      subtitle: 'Challenge friends',
-      icon: 'user-friends',
-      color: theme.colors.accent.pink,
-      onPress: () => router.push('/compete'),
+      id: 'camera-scan',
+      title: 'Camera Scan',
+      subtitle: 'Scan books, whiteboards, or documents',
+      examples: ['Textbook pages', 'Handwritten notes', 'Whiteboards'],
+      icon: 'camera',
+      color: theme.colors.accent.blue,
+      onPress: () => setShowCameraModal(true),
+    },
+    {
+      id: 'pdf-upload',
+      title: 'PDF Upload',
+      subtitle: 'Upload documents and PDFs',
+      examples: ['Study materials', 'Research papers', 'Documents'],
+      icon: 'file',
+      color: theme.colors.accent.purple,
+      onPress: () => setShowPDFModal(true),
     },
   ];
 
@@ -168,6 +236,71 @@ export default function Learn() {
     opacity: fadeIn.value,
     transform: [{ translateY: interpolate(fadeIn.value, [0, 1], [30, 0]) }],
   }));
+
+  const handleTextExtracted = async (text: string, analysis: any, metadata?: any) => {
+    try {
+      setIsProcessing(true);
+      
+      // Process and display the extracted text for user review
+      console.log('Extracted text:', text);
+      console.log('Analysis:', analysis);
+      
+      // Close modals
+      setShowCameraModal(false);
+      setShowPDFModal(false);
+      
+      // Show success message with extracted content preview
+      alert(`Successfully extracted text:\n\n${text.slice(0, 200)}${text.length > 200 ? '...' : ''}`);
+      
+    } catch (error) {
+      console.error('Error processing extracted text:', error);
+      alert('Failed to process the content. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleContentExtracted = async (text: string, analysis: any, metadata: any) => {
+    try {
+      setIsProcessing(true);
+      
+      // Process and display the YouTube content for user review
+      console.log('YouTube content:', text);
+      console.log('Video metadata:', metadata);
+      
+      setShowYouTubeModal(false);
+      
+      // Show success message with video info
+      const videoTitle = metadata?.videoMetadata?.title || 'Video';
+      alert(`Successfully processed YouTube video:\n\n${videoTitle}\n\nContent extracted: ${text.slice(0, 150)}${text.length > 150 ? '...' : ''}`);
+      
+    } catch (error) {
+      console.error('Error processing YouTube content:', error);
+      alert('Failed to process the video. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleTextSubmitted = async (text: string) => {
+    try {
+      setIsProcessing(true);
+      
+      // Process the submitted text
+      console.log('Text submitted:', text);
+      
+      setShowTextModal(false);
+      
+      // Show success message with text preview
+      alert(`Successfully processed text:\n\n${text.slice(0, 200)}${text.length > 200 ? '...' : ''}`);
+      
+    } catch (error) {
+      console.error('Error processing text:', error);
+      alert('Failed to process the text. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -237,13 +370,22 @@ export default function Learn() {
           colors={[action.color, action.color + '80']}
           style={styles.actionGradient}
         >
-          <View style={styles.actionIcon}>
-            <FontAwesome5 name={action.icon} size={20} color="#ffffff" solid />
+          <View style={styles.actionTop}>
+            <View style={styles.actionIcon}>
+              <FontAwesome5 name={action.icon} size={18} color="#ffffff" solid />
+            </View>
           </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>{action.title}</Text>
             <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
           </View>
+          {action.examples && (
+            <View style={styles.actionExamples}>
+              {action.examples.slice(0, 2).map((example, index) => (
+                <Text key={index} style={styles.actionExample}>• {example}</Text>
+              ))}
+            </View>
+          )}
         </LinearGradient>
       </TouchableOpacity>
     );
@@ -308,7 +450,10 @@ export default function Learn() {
           {/* Quick Actions */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-              Quick Actions
+              Learning Tools
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.colors.text.secondary }]}>
+              Process content and test your knowledge
             </Text>
             <View style={styles.quickActionsGrid}>
               {quickActions.map((action) => (
@@ -330,6 +475,44 @@ export default function Learn() {
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* Camera Scan Modal */}
+      {showCameraModal && (
+        <CameraScanModal
+          visible={showCameraModal}
+          onClose={() => setShowCameraModal(false)}
+          onTextExtracted={handleTextExtracted}
+        />
+      )}
+
+      {/* PDF Upload Modal */}
+      {showPDFModal && (
+        <PDFUploadModal
+          visible={showPDFModal}
+          onClose={() => setShowPDFModal(false)}
+          onTextExtracted={handleTextExtracted}
+        />
+      )}
+
+      {/* YouTube Input Modal */}
+      {showYouTubeModal && (
+        <YouTubeInputModal
+          visible={showYouTubeModal}
+          onClose={() => setShowYouTubeModal(false)}
+          onContentExtracted={handleContentExtracted}
+        />
+      )}
+
+      {/* Text Input Modal */}
+      {showTextModal && (
+        <ContentGenerationModal
+          visible={showTextModal}
+          onClose={() => setShowTextModal(false)}
+          onGenerate={handleCreateFromText}
+          contentType="text"
+          isLoading={isProcessing}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -417,57 +600,81 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
+    marginBottom: theme.spacing.sm,
+  },
+
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.caption,
     marginBottom: theme.spacing.lg,
   },
   
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
+    justifyContent: 'space-between',
   },
   
   actionCard: {
-    flex: 1,
-    minWidth: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
+    width: (width - theme.spacing.lg * 2 - theme.spacing.sm) / 2,
+    height: 130,
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
     ...theme.shadows.sm,
+    marginBottom: theme.spacing.sm,
   },
   
   actionGradient: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     alignItems: 'center',
-    minHeight: 120,
-    justifyContent: 'center',
+    height: '100%',
+    justifyContent: 'space-between',
+  },
+
+  actionTop: {
+    alignItems: 'center',
   },
   
   actionIcon: {
-    width: 48,
-    height: 48,
+    width: 36,
+    height: 36,
     borderRadius: theme.borderRadius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
   
   actionContent: {
     alignItems: 'center',
+    flex: 1,
+    paddingVertical: theme.spacing.xs,
   },
   
   actionTitle: {
     color: '#ffffff',
-    fontSize: 16,
-    fontFamily: theme.fonts.subheading,
+    fontSize: 14,
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   
   actionSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    fontFamily: theme.fonts.caption,
+    fontSize: 11,
     textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  actionExamples: {
+    alignItems: 'center',
+  },
+
+  actionExample: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 8,
+    textAlign: 'center',
+    marginBottom: 1,
   },
   
   subjectsContainer: {
