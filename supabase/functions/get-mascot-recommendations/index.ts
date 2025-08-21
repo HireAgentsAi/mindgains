@@ -1,5 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +10,7 @@ interface MascotRequest {
   userId: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -94,7 +93,10 @@ serve(async (req) => {
 async function generateRecommendations(userStats: any, userMemory: any[], recentAttempts: any[]) {
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
   
+  console.log('OpenAI API Key available:', !!openaiApiKey)
+  
   if (!openaiApiKey) {
+    console.log('No OpenAI API key found, using fallback recommendations')
     // Fallback recommendations
     return [
       {
@@ -142,6 +144,7 @@ Return JSON:
   ]
 }`
 
+  try {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -176,7 +179,20 @@ Return JSON:
     {
       text: "Ready for today's quiz? Let's boost your knowledge! 🚀",
       type: "daily_motivation",
+      const errorText = await response.text()
+      console.error('OpenAI API response:', response.status, errorText)
       subject: "General"
     }
   ]
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error)
+    // Return fallback recommendations on API error
+    return [
+      {
+        text: "Ready for today's quiz? Let's boost your knowledge! 🚀",
+        type: "daily_motivation",
+        subject: "General"
+      }
+    ]
+  }
 }
