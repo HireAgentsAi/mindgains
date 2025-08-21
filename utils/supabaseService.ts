@@ -224,13 +224,13 @@ export class SupabaseService {
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
-        // Auth session missing is normal for unauthenticated users
+        // Auth session missing is normal for unauthenticated users - don't log as error
         return null;
       }
       
       return user;
     } catch (error) {
-      // Silently handle missing auth session
+      // Silently handle missing auth session - this is expected behavior
       return null;
     }
   }
