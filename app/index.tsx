@@ -106,7 +106,14 @@ export default function SplashScreen() {
         if (!isMounted.current) return;
         
         // Check if user is already authenticated
-        const user = await SupabaseService.getCurrentUser();
+        let user = null;
+        try {
+          user = await SupabaseService.getCurrentUser();
+        } catch (authError) {
+          // Handle auth session missing gracefully
+          console.log('No active auth session found, proceeding to auth screen');
+          user = null;
+        }
         
         if (user) {
           console.log('✅ User authenticated, navigating to tabs');
@@ -127,7 +134,7 @@ export default function SplashScreen() {
         }, 4000);
         
       } catch (error) {
-        console.log('Navigation initialization error:', error);
+        console.log('App initialization error:', error);
         // Fallback to auth screen
         if (!isMounted.current) return;
         setTimeout(() => {
